@@ -165,7 +165,7 @@ export function SignInButton() {
         onClick={() =>
           authClient.signIn.social({
             provider: "google",
-            callbackURL: "/browse",
+            callbackURL: "/browse/new",
           })
         }
       >

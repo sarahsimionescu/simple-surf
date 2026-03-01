@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import {
   DefaultChatTransport,
@@ -15,6 +15,130 @@ interface ActiveScreen {
   toolCallId: string;
 }
 
+// animated dots for loading states
+function PulsingDots() {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4A4A48]" />
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4A4A48] [animation-delay:0.2s]" />
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4A4A48] [animation-delay:0.4s]" />
+    </span>
+  );
+}
+
+// inline markdown: **bold**, *italic*, `code`
+function InlineFormatted({ text }: { text: string }) {
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**"))
+          return <strong key={i}>{part.slice(2, -2)}</strong>;
+        if (part.startsWith("*") && part.endsWith("*"))
+          return <em key={i}>{part.slice(1, -1)}</em>;
+        if (part.startsWith("`") && part.endsWith("`"))
+          return (
+            <code
+              key={i}
+              className="rounded bg-[#141414]/[0.06] px-1.5 py-0.5 text-[0.9em]"
+            >
+              {part.slice(1, -1)}
+            </code>
+          );
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
+// block-level markdown: headings, lists, paragraphs
+function FormattedText({ text }: { text: string }) {
+  const lines = text.split("\n");
+  const blocks: React.ReactNode[] = [];
+  let currentList: { type: "ul" | "ol"; items: string[] } | null = null;
+
+  const flushList = () => {
+    if (!currentList) return;
+    const Tag = currentList.type;
+    blocks.push(
+      <Tag
+        key={`list-${blocks.length}`}
+        className={`my-1 space-y-0.5 ${Tag === "ol" ? "list-decimal" : "list-disc"} pl-5`}
+      >
+        {currentList.items.map((item, j) => (
+          <li key={j}>
+            <InlineFormatted text={item} />
+          </li>
+        ))}
+      </Tag>,
+    );
+    currentList = null;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+
+    // headings
+    const headingMatch = /^(#{1,3})\s+(.+)$/.exec(line);
+    if (headingMatch) {
+      flushList();
+      const level = headingMatch[1]!.length;
+      const content = headingMatch[2]!;
+      const sizeClass =
+        level === 1 ? "text-lg font-bold" : level === 2 ? "text-base font-bold" : "text-[15px] font-semibold";
+      blocks.push(
+        <p key={`h-${i}`} className={`${sizeClass} mt-2 first:mt-0`}>
+          <InlineFormatted text={content} />
+        </p>,
+      );
+      continue;
+    }
+
+    // unordered list
+    if (/^[-*]\s+/.test(line)) {
+      const item = line.replace(/^[-*]\s+/, "");
+      if (currentList?.type === "ul") {
+        currentList.items.push(item);
+      } else {
+        flushList();
+        currentList = { type: "ul", items: [item] };
+      }
+      continue;
+    }
+
+    // ordered list
+    const olMatch = /^\d+\.\s+(.+)$/.exec(line);
+    if (olMatch) {
+      const item = olMatch[1]!;
+      if (currentList?.type === "ol") {
+        currentList.items.push(item);
+      } else {
+        flushList();
+        currentList = { type: "ol", items: [item] };
+      }
+      continue;
+    }
+
+    // blank line = paragraph break
+    if (line.trim() === "") {
+      flushList();
+      blocks.push(<div key={`br-${i}`} className="h-2" />);
+      continue;
+    }
+
+    // regular text
+    flushList();
+    blocks.push(
+      <span key={`p-${i}`} className="block">
+        <InlineFormatted text={line} />
+      </span>,
+    );
+  }
+
+  flushList();
+  return <div className="space-y-0.5">{blocks}</div>;
+}
+
 export function BrowseSession({
   conversationId,
   browserLiveUrl,
@@ -24,6 +148,7 @@ export function BrowseSession({
 }) {
   const [input, setInput] = useState("");
   const [activeScreen, setActiveScreen] = useState<ActiveScreen | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { messages, sendMessage, addToolOutput, status } = useChat({
     transport: new DefaultChatTransport({
@@ -35,7 +160,12 @@ export function BrowseSession({
 
   const isLoading = status === "streaming" || status === "submitted";
 
-  // Scan messages for active renderScreen tool calls
+  // auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading]);
+
+  // scan messages for active renderScreen tool calls
   useEffect(() => {
     for (const message of messages) {
       for (const part of message.parts) {
@@ -51,7 +181,6 @@ export function BrowseSession({
             prompt: string;
             options?: string[];
           };
-          // Check if this is a renderScreen tool by checking part.type
           if (part.type === "tool-renderScreen") {
             setActiveScreen({
               type: toolInput.type,
@@ -78,21 +207,23 @@ export function BrowseSession({
   };
 
   return (
-    <div className="flex h-screen">
-      {/* Main content: browser iframe + render screen overlay */}
-      <div className="relative flex-[3]">
+    <div
+      className="flex h-screen bg-[#F7F7F5] text-[#141414]"
+      style={{ colorScheme: "light" }}
+    >
+      {/* browser iframe + render screen overlay */}
+      <div className="relative min-w-0 flex-1">
         {browserLiveUrl && (
           <iframe
             src={browserLiveUrl}
-            className="h-full w-full border-0"
+            className="absolute inset-0 h-full w-full border-0"
             title="Browser View"
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
           />
         )}
 
-        {/* Render screen overlay */}
         {activeScreen && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/90">
+          <div className="absolute inset-0 flex items-center justify-center bg-[#F7F7F5]/90 backdrop-blur-sm">
             <div className="w-full max-w-xl">
               <RenderScreen
                 type={activeScreen.type}
@@ -105,25 +236,47 @@ export function BrowseSession({
         )}
       </div>
 
-      {/* Chat panel */}
-      <div className="flex h-full flex-[2] flex-col border-l">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="flex flex-col gap-4">
+      {/* chat panel */}
+      <div className="flex h-full w-[400px] shrink-0 flex-col border-l border-[#141414]/[0.06] bg-[#F7F7F5]">
+        {/* header */}
+        <div className="flex items-center justify-between border-b border-[#141414]/[0.06] px-5 py-4">
+          <span className="font-[family-name:var(--font-syne)] text-sm font-bold lowercase tracking-tight text-[#141414]">
+            simplesurf 🌊
+          </span>
+          <a
+            href="/browse"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4A4A48] transition-colors hover:bg-[#141414]/[0.06] hover:text-[#141414] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
+            aria-label="Chat history"
+            title="Chat history"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </a>
+        </div>
+
+        {/* messages */}
+        <div className="flex-1 overflow-y-auto px-5 py-6">
+          <div className="flex flex-col gap-5">
             {messages.map((message) => (
-              <div key={message.id}>
+              <div key={message.id} className="flex flex-col gap-1">
                 {message.parts.map((part, i) => {
                   if (part.type === "text") {
+                    const isUser = message.role === "user";
                     return (
                       <div
                         key={`${message.id}-${i}`}
-                        className={`rounded-2xl px-4 py-3 text-lg ${
-                          message.role === "user"
-                            ? "ml-auto max-w-[80%] bg-primary text-primary-foreground"
-                            : "mr-auto max-w-[80%] bg-muted"
-                        }`}
+                        className={`flex ${isUser ? "justify-end" : "justify-start"}`}
                       >
-                        {part.text}
+                        <div
+                          className={`max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${
+                            isUser
+                              ? "rounded-br-md bg-[#141414] text-white"
+                              : "rounded-bl-md bg-white text-[#141414]"
+                          }`}
+                        >
+                          <FormattedText text={part.text} />
+                        </div>
                       </div>
                     );
                   }
@@ -133,25 +286,26 @@ export function BrowseSession({
                     "state" in part &&
                     "toolCallId" in part
                   ) {
+                    const isRenderScreen = part.type === "tool-renderScreen";
+
                     if (part.state === "input-available") {
+                      // only show status for renderScreen (user action needed)
+                      // other tools are just the AI working in the browser
                       return (
                         <div
                           key={`${message.id}-${i}`}
-                          className="mr-auto max-w-[80%] rounded-2xl bg-accent px-4 py-3 text-lg italic text-muted-foreground"
+                          className="flex items-center gap-2 py-1 text-[13px] text-[#4A4A48]"
                         >
-                          Waiting for your response...
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4A4A48]" />
+                          {isRenderScreen
+                            ? "Needs your input — check the screen on the left"
+                            : "Browsing..."}
                         </div>
                       );
                     }
+                    // hide tool outputs — the text response covers it
                     if (part.state === "output-available") {
-                      return (
-                        <div
-                          key={`${message.id}-${i}`}
-                          className="ml-auto max-w-[80%] rounded-2xl bg-primary/80 px-4 py-3 text-lg text-primary-foreground"
-                        >
-                          {String((part as { output: unknown }).output)}
-                        </div>
-                      );
+                      return null;
                     }
                   }
 
@@ -161,14 +315,16 @@ export function BrowseSession({
             ))}
 
             {isLoading && (
-              <div className="mr-auto max-w-[80%] rounded-2xl bg-muted px-4 py-3 text-lg text-muted-foreground">
-                Thinking...
+              <div className="flex items-center gap-2 py-1 text-[13px] text-[#4A4A48]">
+                <PulsingDots />
               </div>
             )}
+
+            <div ref={messagesEndRef} />
           </div>
         </div>
 
-        {/* Input */}
+        {/* input */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -176,22 +332,51 @@ export function BrowseSession({
             void sendMessage({ text: input });
             setInput("");
           }}
-          className="border-t p-4"
+          className="border-t border-[#141414]/[0.06] p-4"
         >
-          <div className="flex gap-3">
-            <input
+          <div className="flex items-end gap-2 rounded-xl border border-[#141414]/10 bg-[#F7F7F5] px-4 py-2 transition-colors focus-within:border-[#0077B6]">
+            <textarea
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!input.trim() || isLoading) return;
+                  void sendMessage({ text: input });
+                  setInput("");
+                  e.currentTarget.style.height = "auto";
+                }
+              }}
               placeholder="What would you like to do?"
-              className="flex-1 rounded-xl border-2 border-input bg-background px-4 py-3 text-lg focus:border-primary focus:outline-none"
+              rows={1}
+              className="max-h-32 flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-relaxed text-[#141414] placeholder:text-[#9A9A97] focus:outline-none"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="rounded-xl bg-primary px-6 py-3 text-lg font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-[#141414] text-white transition-all duration-200 hover:bg-[#0077B6] disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
+              aria-label="Send message"
             >
-              Send
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 8h10M9 4l4 4-4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
           </div>
         </form>

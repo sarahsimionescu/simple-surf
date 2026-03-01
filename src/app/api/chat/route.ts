@@ -45,6 +45,7 @@ export async function POST(req: Request) {
   const baseModel = gatewayProvider("anthropic/claude-sonnet-4");
   const modelWithMemory = withSupermemory(baseModel, session.user.id, {
     apiKey: env.SUPERMEMORY_API_KEY,
+    addMemory: "always",
   });
   const model = wrapLanguageModel({
     model: modelWithMemory,

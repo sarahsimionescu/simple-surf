@@ -69,7 +69,7 @@ Guidelines:
     messages: await convertToModelMessages(messages),
     stopWhen: stepCountIs(10),
     tools: {
-      browse: createBrowseTool(conversation.browserSessionId),
+      browse: createBrowseTool(conversation.browserSessionId, conversationId),
       renderScreen: renderScreenTool,
     },
   });

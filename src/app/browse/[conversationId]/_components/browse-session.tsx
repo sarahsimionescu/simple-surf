@@ -395,6 +395,7 @@ export function BrowseSession({
 
   const submitToolOutput = (toolCallId: string, value: string) => {
     clog("TOOL_OUTPUT", `Submitting: toolCallId=${toolCallId} value="${value}"`);
+    streamingTTS.stop();
     submittedToolCalls.current.add(toolCallId);
     try {
       void addToolOutput({
@@ -603,7 +604,7 @@ export function BrowseSession({
                 ].map((suggestion) => (
                   <button
                     key={suggestion}
-                    onClick={() => void sendMessage({ text: suggestion })}
+                    onClick={() => { streamingTTS.stop(); void sendMessage({ text: suggestion }); }}
                     className="cursor-pointer rounded-xl border border-[#141414]/[0.06] bg-white px-4 py-3 text-left text-[14px] text-[#4A4A48] transition-all duration-200 hover:border-[#0077B6]/30 hover:text-[#141414]"
                   >
                     {suggestion}
@@ -730,6 +731,7 @@ export function BrowseSession({
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            streamingTTS.stop();
             clog(
               "SEND",
               `Submit pressed. input="${input.trim()}" isLoading=${isLoading} status=${status} activeScreen=${!!activeScreen}`,
@@ -764,12 +766,6 @@ export function BrowseSession({
               setActiveScreen(null);
               setInput("");
               return;
-            }
-            // Dismiss any renderScreen overlay — the user chose to send a message instead
-            if (activeScreen) {
-              clog("SEND", `Dismissing activeScreen ${activeScreen.toolCallId} — user sent a message instead`);
-              submittedToolCalls.current.add(activeScreen.toolCallId);
-              setActiveScreen(null);
             }
             clog("SEND", `Calling sendMessage with text="${input}"`);
             void sendMessage({ text: input });
@@ -828,12 +824,6 @@ export function BrowseSession({
                   if (isLoading) {
                     clog("SEND:ENTER", "Blocked: still loading");
                     return;
-                  }
-                  // Dismiss any renderScreen overlay — the user chose to send a message instead
-                  if (activeScreen) {
-                    clog("SEND:ENTER", `Dismissing activeScreen ${activeScreen.toolCallId}`);
-                    submittedToolCalls.current.add(activeScreen.toolCallId);
-                    setActiveScreen(null);
                   }
                   clog(
                     "SEND:ENTER",

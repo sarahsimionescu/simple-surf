@@ -51,7 +51,7 @@ export function BrowseHome({
       </nav>
 
       {/* hero */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6">
+      <div className="flex flex-col items-center px-6 pt-[18vh]">
         <h1 className="font-[family-name:var(--font-syne)] text-3xl font-bold lowercase tracking-tight md:text-4xl">
           what can we help you with?
         </h1>
@@ -71,11 +71,11 @@ export function BrowseHome({
 
         {/* conversation history */}
         {conversations.length > 0 && (
-          <div className="mt-16 w-full max-w-lg">
+          <div className="mt-16 w-full max-w-4xl pb-16">
             <h2 className="mb-3 font-[family-name:var(--font-syne)] text-sm font-bold uppercase tracking-[0.15em] text-[#9A9A97]">
               Pick up where you left off
             </h2>
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {conversations.map((c) => (
                 <button
                   key={c.id}

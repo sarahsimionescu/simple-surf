@@ -42,7 +42,7 @@ export default async function Home() {
         <LandingHero />
 
         {/* product screenshot placeholder */}
-        <section className="px-6 pb-32 md:pb-40">
+        <section className="px-6 pt-16 pb-32 md:pt-24 md:pb-40">
           <div className="mx-auto max-w-6xl">
             <div className="flex aspect-[16/10] items-center justify-center rounded-2xl border border-[#141414]/[0.06] bg-white shadow-[0_4px_60px_rgba(0,0,0,0.06)] md:rounded-3xl">
               <span className="text-sm text-[#9A9A97]">

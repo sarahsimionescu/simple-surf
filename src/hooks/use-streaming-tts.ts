@@ -3,6 +3,11 @@ import { useRef, useCallback } from "react";
 const VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // ElevenLabs "Rachel" default
 const MODEL_ID = "eleven_multilingual_v2";
 
+function clog(tag: string, ...args: unknown[]) {
+  const ts = new Date().toISOString().slice(11, 23);
+  console.log(`[${ts}][TTS:${tag}]`, ...args);
+}
+
 interface StreamingTTSControls {
   /** Call when AI streaming starts and voice mode is active */
   start: () => Promise<void>;
@@ -51,11 +56,12 @@ export function useStreamingTTS(): StreamingTTSControls {
       source.start(startTime);
       nextPlayTimeRef.current = startTime + audioBuffer.duration;
     } catch (err) {
-      console.warn("[StreamingTTS] Failed to play audio chunk:", err);
+      clog("AUDIO", "Failed to play chunk:", err);
     }
   };
 
   const start = useCallback(async () => {
+    clog("START", "Initiating streaming TTS");
     // Clean up any existing connection
     if (wsRef.current) {
       wsRef.current.close();
@@ -74,7 +80,7 @@ export function useStreamingTTS(): StreamingTTSControls {
       const data = (await res.json()) as { token: string };
       token = data.token;
     } catch (err) {
-      console.error("[StreamingTTS] Failed to get token:", err);
+      clog("TOKEN", "Failed to get token:", err);
       activeRef.current = false;
       return;
     }
@@ -86,7 +92,7 @@ export function useStreamingTTS(): StreamingTTSControls {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log("[StreamingTTS] WebSocket connected");
+      clog("WS", "Connected");
       // Send initialization message
       ws.send(
         JSON.stringify({
@@ -97,6 +103,7 @@ export function useStreamingTTS(): StreamingTTSControls {
       );
     };
 
+    let chunkCount = 0;
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data as string) as {
@@ -104,7 +111,12 @@ export function useStreamingTTS(): StreamingTTSControls {
           isFinal?: boolean;
         };
         if (data.audio) {
+          chunkCount++;
+          clog("WS", `Audio chunk #${chunkCount} received (${data.audio.length} chars b64)`);
           void playAudioChunk(data.audio);
+        }
+        if (data.isFinal) {
+          clog("WS", `Final chunk received after ${chunkCount} chunks`);
         }
       } catch {
         // ignore parse errors
@@ -112,11 +124,11 @@ export function useStreamingTTS(): StreamingTTSControls {
     };
 
     ws.onerror = (err) => {
-      console.error("[StreamingTTS] WebSocket error:", err);
+      clog("WS", "Error:", err);
     };
 
-    ws.onclose = () => {
-      console.log("[StreamingTTS] WebSocket closed");
+    ws.onclose = (event) => {
+      clog("WS", `Closed (code=${event.code} reason="${event.reason}")`);
       activeRef.current = false;
     };
   }, []);
@@ -129,6 +141,7 @@ export function useStreamingTTS(): StreamingTTSControls {
     const newText = fullText.slice(sentLengthRef.current);
     if (!newText) return;
 
+    clog("SEND", `+${newText.length} chars (total ${fullText.length}): "${newText.slice(0, 60)}${newText.length > 60 ? "..." : ""}"`);
     sentLengthRef.current = fullText.length;
     ws.send(
       JSON.stringify({
@@ -139,6 +152,7 @@ export function useStreamingTTS(): StreamingTTSControls {
   }, []);
 
   const finish = useCallback(() => {
+    clog("FINISH", `Flushing remaining audio (sent ${sentLengthRef.current} chars total)`);
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
@@ -155,6 +169,7 @@ export function useStreamingTTS(): StreamingTTSControls {
   }, []);
 
   const stop = useCallback(() => {
+    clog("STOP", "Stopping streaming TTS");
     // Close WebSocket
     if (wsRef.current) {
       if (wsRef.current.readyState === WebSocket.OPEN) {

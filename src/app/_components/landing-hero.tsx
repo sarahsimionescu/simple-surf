@@ -19,7 +19,7 @@ export function LandingHero() {
             <span className="text-[#0077B6]/40">.</span>
           </span>
         </h1>
-        <p className="landing-reveal landing-reveal-delay-1 mx-auto mt-8 max-w-lg text-lg leading-relaxed text-[#4A4A48] md:text-xl">
+        <p className="landing-reveal landing-reveal-delay-1 mx-auto mt-8 max-w-lg text-xl leading-relaxed text-[#4A4A48] md:text-2xl">
           SimpleSurf browses the web for you. Just describe what
           you&apos;re looking for — no computer skills needed.
         </p>

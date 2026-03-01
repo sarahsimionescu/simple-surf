@@ -64,7 +64,7 @@ export default async function Home() {
 
       {/* footer */}
       <footer className="px-8 py-10 text-center">
-        <span className="font-[family-name:var(--font-syne)] text-sm lowercase tracking-[0.1em] text-[#737370]">
+        <span className="font-[family-name:var(--font-syne)] text-base lowercase tracking-[0.1em] text-[#737370]">
           simplesurf &copy; 2026
         </span>
       </footer>

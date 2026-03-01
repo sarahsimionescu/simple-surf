@@ -240,12 +240,26 @@ export function BrowseSession({
           }}
           className="border-t border-[#141414]/[0.06] p-4"
         >
-          <div className="flex items-center gap-2 rounded-xl border border-[#141414]/10 bg-[#F7F7F5] px-4 py-2 transition-colors focus-within:border-[#0077B6]">
-            <input
+          <div className="flex items-end gap-2 rounded-xl border border-[#141414]/10 bg-[#F7F7F5] px-4 py-2 transition-colors focus-within:border-[#0077B6]">
+            <textarea
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!input.trim() || isLoading) return;
+                  void sendMessage({ text: input });
+                  setInput("");
+                  e.currentTarget.style.height = "auto";
+                }
+              }}
               placeholder="What would you like to do?"
-              className="flex-1 bg-transparent py-1.5 text-[15px] text-[#141414] placeholder:text-[#9A9A97] focus:outline-none"
+              rows={1}
+              className="max-h-32 flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-relaxed text-[#141414] placeholder:text-[#9A9A97] focus:outline-none"
               disabled={isLoading}
             />
             <button

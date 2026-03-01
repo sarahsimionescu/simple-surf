@@ -169,6 +169,10 @@
   animation: landing-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1.5s both;
 }
 
+.landing-dot-hover:hover .landing-dot-bounce {
+  animation: landing-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* button shine sweep on hover */
 .btn-shine {
   position: relative;

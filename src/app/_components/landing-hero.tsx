@@ -14,7 +14,7 @@ export function LandingHero() {
         >
           the internet,{" "}
           <br className="md:hidden" />
-          <span className="md:whitespace-nowrap">
+          <span className="landing-dot-hover md:whitespace-nowrap">
             <span className="text-[#0077B6]">made easy</span>
             <span className="landing-dot-bounce text-[#0077B6]/40">.</span>
           </span>

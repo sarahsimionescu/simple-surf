@@ -17,7 +17,10 @@ export async function runBrowserTask(sessionId: string, task: string) {
     sessionId,
   });
   const result = await client.tasks.wait(created.id);
-  return { output: result.output ?? "Task completed.", status: result.status };
+  // grab the last step's screenshot url if available
+  const steps = result.steps ?? [];
+  const screenshotUrl = [...steps].reverse().find((s) => s.screenshotUrl)?.screenshotUrl ?? null;
+  return { output: result.output ?? "Task completed.", status: result.status, screenshotUrl };
 }
 
 export async function stopBrowserSession(sessionId: string) {

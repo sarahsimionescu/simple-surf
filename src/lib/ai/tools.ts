@@ -28,12 +28,15 @@ export function createBrowseTool(
     execute: async ({ instruction }) => {
       const result = await runBrowserTask(browserSessionId, instruction);
 
-      // update lastVisitedUrl from output or instruction
+      // update lastVisitedUrl and screenshot from output or instruction
       const url = extractUrl(result.output) ?? extractUrl(instruction);
-      if (url) {
+      if (url || result.screenshotUrl) {
         await db.conversation.update({
           where: { id: conversationId },
-          data: { lastVisitedUrl: url },
+          data: {
+            ...(url && { lastVisitedUrl: url }),
+            ...(result.screenshotUrl && { lastScreenshotUrl: result.screenshotUrl }),
+          },
         });
       }
 

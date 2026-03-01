@@ -176,6 +176,12 @@ export function BrowseSession({
   const sentViaMicRef = useRef(false);
   const streamingTTS = useStreamingTTS();
 
+  useEffect(() => {
+    return () => {
+      streamingTTS.stop();
+    };
+  }, [streamingTTS]);
+
   // Log mount
   useEffect(() => {
     clog(
@@ -284,8 +290,23 @@ export function BrowseSession({
     // When streaming ends, flush remaining audio and reset
     if (status === "ready" && ttsStartedRef.current) {
       ttsStartedRef.current = false;
+      const wasMic = sentViaMicRef.current;
       sentViaMicRef.current = false;
-      streamingTTS.finish();
+
+      if (streamingTTS.isActive()) {
+        // Streaming TTS worked, just flush
+        streamingTTS.finish();
+      } else if (wasMic) {
+        // Streaming TTS failed to connect, fall back to batch TTS
+        const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+        if (lastAssistant) {
+          const textParts = lastAssistant.parts
+            .filter((p): p is { type: "text"; text: string } => p.type === "text")
+            .map((p) => p.text)
+            .join(" ");
+          if (textParts.trim()) void playTTS(textParts);
+        }
+      }
     }
   }, [status, streamingTTS]);
 

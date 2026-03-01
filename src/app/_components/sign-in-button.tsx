@@ -80,7 +80,7 @@ function SignInForm() {
         const result = await authClient.signUp.email({
           email,
           password,
-          name: name!,
+          name: name,
         });
         if (result.error) {
           setError(result.error.message ?? "Sign up failed");

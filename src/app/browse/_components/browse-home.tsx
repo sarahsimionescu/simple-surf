@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "~/server/better-auth/client";
 import { api } from "~/trpc/react";
+import Image from "next/image";
+import Link from "next/link";
 import { ArrowIcon } from "~/app/_components/arrow-icon";
 
 interface Conversation {
@@ -42,12 +44,12 @@ export function BrowseHome({
           simplesurf 🌊
         </span>
         <div className="flex items-center gap-4">
-          <a
+          <Link
             href="/browse/settings"
             className="text-base font-medium text-[#4A4A48] underline-offset-4 transition-colors duration-200 hover:text-[#141414] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
           >
             Settings
-          </a>
+          </Link>
           <button
             onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => router.push("/") } })}
             className="cursor-pointer text-base font-medium text-[#4A4A48] underline-offset-4 transition-colors duration-200 hover:text-[#141414] hover:underline"
@@ -63,7 +65,7 @@ export function BrowseHome({
           what can we help you with?
         </h1>
         <p className="mt-3 text-lg text-[#4A4A48]">
-          Start a new conversation and we'll browse the web for you.
+          Start a new conversation and we&apos;ll browse the web for you.
         </p>
         <button
           onClick={() => createConversation.mutate({})}
@@ -96,10 +98,11 @@ export function BrowseHome({
                   {/* screenshot thumbnail */}
                   <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#EDEDEB]">
                     {c.lastScreenshotUrl ? (
-                      <img
+                      <Image
                         src={c.lastScreenshotUrl}
                         alt=""
-                        className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+                        fill
+                        className="object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[#9A9A97]">

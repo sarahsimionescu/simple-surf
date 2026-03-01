@@ -13,7 +13,7 @@ export function MemoryGraphView() {
     fetch("/api/graph")
       .then((res) => res.json())
       .then((data) => {
-        setDocuments(data.documents ?? []);
+        setDocuments((data as { documents?: DocumentWithMemories[] }).documents ?? []);
         setIsLoading(false);
       })
       .catch((err) => {

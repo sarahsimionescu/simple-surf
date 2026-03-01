@@ -14,7 +14,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F5] text-[#141414] selection:bg-[#0077B6]/20">
+    <div className="min-h-screen overflow-x-hidden bg-[#F7F7F5] text-[#141414] selection:bg-[#0077B6]/20" style={{ colorScheme: "light" }}>
       {/* skip to content */}
       <a
         href="#main"
@@ -40,6 +40,18 @@ export default async function Home() {
 
       <main id="main">
         <LandingHero />
+
+        {/* product screenshot placeholder */}
+        <section className="px-6 pb-32 md:pb-40">
+          <div className="mx-auto max-w-6xl">
+            <div className="flex aspect-[16/10] items-center justify-center rounded-2xl border border-[#141414]/[0.06] bg-white shadow-[0_4px_60px_rgba(0,0,0,0.06)] md:rounded-3xl">
+              <span className="text-sm text-[#9A9A97]">
+                product screenshot
+              </span>
+            </div>
+          </div>
+        </section>
+
         <LandingSteps />
 
         {/* divider */}
@@ -52,8 +64,8 @@ export default async function Home() {
 
       {/* footer */}
       <footer className="px-8 py-10 text-center">
-        <span className="font-[family-name:var(--font-syne)] text-sm tracking-[0.1em] text-[#737370]">
-          SimpleSurf &copy; 2026
+        <span className="font-[family-name:var(--font-syne)] text-sm lowercase tracking-[0.1em] text-[#737370]">
+          simplesurf &copy; 2026
         </span>
       </footer>
     </div>

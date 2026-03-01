@@ -9,7 +9,7 @@ export function LandingCta() {
     >
       <h2
         id="cta-heading"
-        className="font-[family-name:var(--font-syne)] text-4xl font-extrabold tracking-[-0.02em] md:text-6xl lg:text-7xl"
+        className="font-[family-name:var(--font-syne)] text-4xl font-extrabold lowercase tracking-[-0.02em] md:text-6xl lg:text-7xl"
       >
         ready to{" "}
         <span className="text-[#0077B6]">surf</span>

@@ -5,17 +5,19 @@ export function LandingHero() {
   return (
     <section
       aria-labelledby="hero-heading"
-      className="relative flex min-h-screen flex-col items-center justify-center px-6 pt-20"
+      className="relative flex min-h-screen flex-col items-center justify-center px-6 pt-20 pb-28"
     >
       <div className="max-w-5xl text-center">
         <h1
           id="hero-heading"
-          className="landing-reveal font-[family-name:var(--font-syne)] text-[clamp(3rem,9vw,9rem)] font-extrabold leading-[0.95] tracking-[-0.02em]"
+          className="landing-reveal font-[family-name:var(--font-syne)] text-[clamp(2.25rem,9vw,9rem)] font-extrabold lowercase leading-[0.95] tracking-[-0.02em]"
         >
           the internet,
           <br />
-          <span className="whitespace-nowrap text-[#0077B6]">made easy</span>
-          <span className="text-[#0077B6]/40">.</span>
+          <span className="md:whitespace-nowrap">
+            <span className="text-[#0077B6]">made easy</span>
+            <span className="text-[#0077B6]/40">.</span>
+          </span>
         </h1>
         <p className="landing-reveal landing-reveal-delay-1 mx-auto mt-8 max-w-lg text-lg leading-relaxed text-[#4A4A48] md:text-xl">
           SimpleSurf browses the web for you. Just describe what
@@ -34,7 +36,7 @@ export function LandingHero() {
       {/* scroll indicator */}
       <div
         aria-hidden="true"
-        className="landing-reveal landing-reveal-delay-3 absolute bottom-10 flex flex-col items-center gap-2"
+        className="landing-reveal landing-reveal-delay-3 absolute bottom-8 flex flex-col items-center gap-2"
       >
         <span className="text-[10px] uppercase tracking-[0.2em] text-[#9A9A97]">
           scroll

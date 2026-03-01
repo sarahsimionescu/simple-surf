@@ -26,7 +26,7 @@ export function LandingSteps() {
         <div className="mb-20 text-center">
           <h2
             id="steps-heading"
-            className="font-[family-name:var(--font-syne)] text-sm font-bold uppercase tracking-[0.15em] text-[#4A4A48]"
+            className="font-[family-name:var(--font-syne)] text-sm font-bold lowercase tracking-[0.15em] text-[#4A4A48]"
           >
             How it works
           </h2>
@@ -44,7 +44,7 @@ export function LandingSteps() {
                 aria-hidden="true"
                 className="mt-4 mb-4 h-px w-8 bg-[#141414]/10 transition-all duration-500 group-hover:w-full group-hover:bg-[#0077B6]/40"
               />
-              <h3 className="font-[family-name:var(--font-syne)] text-2xl font-bold leading-tight md:text-3xl">
+              <h3 className="font-[family-name:var(--font-syne)] text-2xl font-bold lowercase leading-tight md:text-3xl">
                 {step.title}
               </h3>
               <p className="mt-4 text-base leading-relaxed text-[#4A4A48]">

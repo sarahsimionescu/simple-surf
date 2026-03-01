@@ -150,11 +150,37 @@ export function BrowseSession({
   const [input, setInput] = useState("");
   const [activeScreen, setActiveScreen] = useState<ActiveScreen | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationName, setLocationName] = useState<string | null>(null);
+
+  // request geolocation on mount
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setLocation(coords);
+        // derive city from timezone as a fallback display name
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const city = tz.split("/").pop()?.replace(/_/g, " ") ?? "";
+        setLocationName(city);
+      },
+      () => {
+        // denied or unavailable, use timezone only
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const city = tz.split("/").pop()?.replace(/_/g, " ") ?? "";
+        setLocationName(city);
+      },
+    );
+  }, []);
 
   const { messages, sendMessage, addToolOutput, status } = useChat({
     transport: new DefaultChatTransport({
       api: "/api/chat",
-      body: { conversationId },
+      body: {
+        conversationId,
+        location: location ? { ...location, name: locationName } : locationName ? { name: locationName } : undefined,
+      },
     }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });

@@ -24,8 +24,9 @@ export async function POST(req: Request) {
   const body = (await req.json()) as {
     messages: UIMessage[];
     conversationId: string;
+    location?: { lat?: number; lng?: number; name?: string };
   };
-  const { messages, conversationId } = body;
+  const { messages, conversationId, location } = body;
 
   // Get conversation and verify ownership
   const conversation = await db.conversation.findFirst({
@@ -78,7 +79,7 @@ Your job is to help users browse the web. You have three tools:
 - "webSearch": Use this first for quick factual lookups or finding the right page to visit. After getting results, use "browse" to navigate to the most relevant URL so the user can see it.
 - "browse": Use this to perform actions in the browser (navigate, click, search, fill forms, etc.)
 - "renderScreen": Use this to ask the user for input when you need choices or information from them.
-
+${location ? `\nUser location context:${location.lat && location.lng ? ` coordinates ${location.lat}, ${location.lng}` : ""}${location.name ? ` (${location.name})` : ""}. Use this for location-based queries like finding nearby places, local weather, directions, etc.\n` : ""}
 Guidelines:
 - Use simple, clear language. Avoid jargon.
 - Be patient and reassuring.

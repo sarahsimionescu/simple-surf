@@ -11,6 +11,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  baseURL: env.NEXT_PUBLIC_VERCEL_URL,
   socialProviders: {
     google: {
       clientId: env.GOOGLE_CLIENT_ID,

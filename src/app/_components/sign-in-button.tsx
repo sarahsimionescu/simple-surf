@@ -58,7 +58,7 @@ export function SignInButton() {
         if (result.error) {
           setError(result.error.message ?? "Sign up failed");
         } else {
-          router.push("/browse");
+          router.push("/browse/new");
         }
       } else {
         const result = await authClient.signIn.email({
@@ -68,7 +68,7 @@ export function SignInButton() {
         if (result.error) {
           setError(result.error.message ?? "Sign in failed");
         } else {
-          router.push("/browse");
+          router.push("/browse/new");
         }
       }
     } catch {

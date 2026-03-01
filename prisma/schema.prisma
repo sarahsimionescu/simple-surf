@@ -38,6 +38,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   posts         Post[]
+  conversations Conversation[]
 
   @@unique([email])
   @@map("user")
@@ -75,6 +76,33 @@ model Account {
   updatedAt             DateTime  @updatedAt
 
   @@map("account")
+}
+
+model Conversation {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String?
+  browserSessionId String?
+  browserLiveUrl   String?
+  messages         Message[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("conversation")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String       @db.Text
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@map("message")
 }
 
 model Verification {

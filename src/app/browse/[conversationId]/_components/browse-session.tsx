@@ -388,23 +388,45 @@ export function BrowseSession({
     setActiveScreen(null);
   }, [messages]);
 
+  /** Find a pending renderScreen tool call directly from messages (bypasses activeScreen state timing) */
+  const findPendingRenderScreen = () => {
+    for (const message of messages) {
+      for (const part of message.parts) {
+        if (
+          part.type === "tool-renderScreen" &&
+          "toolCallId" in part &&
+          "state" in part &&
+          part.state === "input-available" &&
+          !submittedToolCalls.current.has(
+            (part as { toolCallId: string }).toolCallId,
+          )
+        ) {
+          return (part as { toolCallId: string }).toolCallId;
+        }
+      }
+    }
+    return null;
+  };
+
   const handleRenderScreenSubmit = (value: string) => {
+    // Try activeScreen first, fall back to scanning messages directly
+    const toolCallId = activeScreen?.toolCallId ?? findPendingRenderScreen();
     clog(
       "RENDER_SUBMIT",
-      `value="${value}" activeScreen=${JSON.stringify(activeScreen)}`,
+      `value="${value}" toolCallId=${toolCallId} activeScreen=${!!activeScreen}`,
     );
-    if (!activeScreen) {
-      clog("RENDER_SUBMIT", "No active screen, ignoring");
+    if (!toolCallId) {
+      clog("RENDER_SUBMIT", "No pending renderScreen found, ignoring");
       return;
     }
     clog(
       "RENDER_SUBMIT",
-      `Submitting tool output: toolCallId=${activeScreen.toolCallId}`,
+      `Submitting tool output: toolCallId=${toolCallId}`,
     );
-    submittedToolCalls.current.add(activeScreen.toolCallId);
+    submittedToolCalls.current.add(toolCallId);
     void addToolOutput({
       tool: "renderScreen",
-      toolCallId: activeScreen.toolCallId,
+      toolCallId: toolCallId,
       output: value,
     });
     setActiveScreen(null);
@@ -736,6 +758,23 @@ export function BrowseSession({
               setInput("");
               return;
             }
+            // Auto-answer any pending renderScreen before sending a new message
+            const pendingToolCallId = findPendingRenderScreen();
+            if (pendingToolCallId) {
+              clog(
+                "SEND",
+                `Auto-answering pending renderScreen ${pendingToolCallId} with user text before sending message`,
+              );
+              submittedToolCalls.current.add(pendingToolCallId);
+              void addToolOutput({
+                tool: "renderScreen",
+                toolCallId: pendingToolCallId,
+                output: input,
+              });
+              setActiveScreen(null);
+              setInput("");
+              return;
+            }
             clog("SEND", `Calling sendMessage with text="${input}"`);
             void sendMessage({ text: input });
             setInput("");
@@ -768,6 +807,24 @@ export function BrowseSession({
                       `RenderScreen active — submitting user text as tool output: "${input}"`,
                     );
                     handleRenderScreenSubmit(input);
+                    setInput("");
+                    e.currentTarget.style.height = "auto";
+                    return;
+                  }
+                  // Auto-answer any pending renderScreen before sending a new message
+                  const pendingId = findPendingRenderScreen();
+                  if (pendingId) {
+                    clog(
+                      "SEND:ENTER",
+                      `Auto-answering pending renderScreen ${pendingId} with user text`,
+                    );
+                    submittedToolCalls.current.add(pendingId);
+                    void addToolOutput({
+                      tool: "renderScreen",
+                      toolCallId: pendingId,
+                      output: input,
+                    });
+                    setActiveScreen(null);
                     setInput("");
                     e.currentTarget.style.height = "auto";
                     return;

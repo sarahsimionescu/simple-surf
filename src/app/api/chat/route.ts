@@ -8,7 +8,7 @@ import {
 import { createGateway } from "@ai-sdk/gateway";
 import { withSupermemory } from "@supermemory/tools/ai-sdk";
 import { cacheMiddleware } from "~/lib/ai/cache-middleware";
-import { createBrowseTool, renderScreenTool } from "~/lib/ai/tools";
+import { createBrowseTool, renderScreenTool, webSearchTool } from "~/lib/ai/tools";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { auth } from "~/server/better-auth";
@@ -55,7 +55,8 @@ export async function POST(req: Request) {
     model,
     system: `You are SimpleSurf, a friendly and patient browsing assistant designed for elderly users.
 
-Your job is to help users browse the web. You have two tools:
+Your job is to help users browse the web. You have three tools:
+- "webSearch": Use this first for quick factual lookups or finding the right page to visit. After getting results, use "browse" to navigate to the most relevant URL so the user can see it.
 - "browse": Use this to perform actions in the browser (navigate, click, search, fill forms, etc.)
 - "renderScreen": Use this to ask the user for input when you need choices or information from them.
 
@@ -70,6 +71,7 @@ Guidelines:
     stopWhen: stepCountIs(10),
     tools: {
       browse: createBrowseTool(conversation.browserSessionId, conversationId),
+      webSearch: webSearchTool,
       renderScreen: renderScreenTool,
     },
   });

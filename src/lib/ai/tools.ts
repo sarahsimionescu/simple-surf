@@ -1,7 +1,9 @@
 import { tool } from "ai";
 import { z } from "zod";
+import Exa from "exa-js";
 import { runBrowserTask } from "~/server/services/browser-use";
 import { db } from "~/server/db";
+import { env } from "~/env";
 
 // extract the first url from a string
 function extractUrl(text: string): string | null {
@@ -39,6 +41,34 @@ export function createBrowseTool(
     },
   });
 }
+
+export const webSearchTool = tool({
+  description:
+    "Search the web for quick answers and background context. Use this for factual questions, looking up information, or gathering context before browsing. Returns relevant results with titles, URLs, and highlights.",
+  inputSchema: z.object({
+    query: z.string().describe("The search query"),
+  }),
+  execute: async ({ query }) => {
+    const exa = new Exa(env.EXA_API_KEY);
+    const results = await exa.search(query, {
+      type: "auto",
+      numResults: 5,
+      contents: {
+        highlights: {
+          maxCharacters: 300,
+        },
+      },
+    });
+
+    const searchResults = results.results.map((r) => ({
+      title: r.title ?? "",
+      url: r.url,
+      highlights: (r as { highlights?: string[] }).highlights ?? [],
+    }));
+
+    return JSON.stringify(searchResults);
+  },
+});
 
 export const renderScreenTool = tool({
   description:

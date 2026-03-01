@@ -15,6 +15,7 @@ interface ActiveScreen {
   toolCallId: string;
 }
 
+
 // animated dots for loading states
 function PulsingDots() {
   return (
@@ -234,6 +235,7 @@ export function BrowseSession({
             </div>
           </div>
         )}
+
       </div>
 
       {/* chat panel */}
@@ -287,10 +289,9 @@ export function BrowseSession({
                     "toolCallId" in part
                   ) {
                     const isRenderScreen = part.type === "tool-renderScreen";
+                    const isWebSearch = part.type === "tool-webSearch";
 
                     if (part.state === "input-available") {
-                      // only show status for renderScreen (user action needed)
-                      // other tools are just the AI working in the browser
                       return (
                         <div
                           key={`${message.id}-${i}`}
@@ -298,8 +299,10 @@ export function BrowseSession({
                         >
                           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4A4A48]" />
                           {isRenderScreen
-                            ? "Needs your input — check the screen on the left"
-                            : "Browsing..."}
+                            ? "Needs your input, check the screen on the left"
+                            : isWebSearch
+                              ? "Searching the web..."
+                              : "Browsing..."}
                         </div>
                       );
                     }

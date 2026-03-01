@@ -21,6 +21,7 @@ export function BrowseHome({
 }) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null);
   const createConversation = api.conversation.create.useMutation({
     onSuccess: (data) => {
       setIsNavigating(true);
@@ -85,11 +86,15 @@ export function BrowseHome({
               {conversations.map((c) => (
                 <button
                   key={c.id}
-                  onClick={() => router.push(`/browse/${c.id}`)}
+                  onClick={() => {
+                    setLoadingConversationId(c.id);
+                    router.push(`/browse/${c.id}`);
+                  }}
+                  disabled={loadingConversationId === c.id}
                   className="group cursor-pointer overflow-hidden rounded-xl border border-[#141414]/[0.06] bg-white text-left transition-all duration-200 hover:border-[#0077B6]/30 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
                 >
                   {/* screenshot thumbnail */}
-                  <div className="aspect-[16/10] w-full overflow-hidden bg-[#EDEDEB]">
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#EDEDEB]">
                     {c.lastScreenshotUrl ? (
                       <img
                         src={c.lastScreenshotUrl}
@@ -102,6 +107,14 @@ export function BrowseHome({
                           <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
                           <circle cx="8.5" cy="10.5" r="1.5" fill="currentColor" />
                           <path d="M3 16l5-4 3 3 4-5 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    )}
+                    {loadingConversationId === c.id && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+                        <svg className="h-6 w-6 animate-spin text-[#0077B6]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" className="opacity-20" />
+                          <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
                         </svg>
                       </div>
                     )}

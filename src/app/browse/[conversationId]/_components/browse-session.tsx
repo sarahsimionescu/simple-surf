@@ -15,6 +15,7 @@ interface ActiveScreen {
   toolCallId: string;
 }
 
+
 // animated dots for loading states
 function PulsingDots() {
   return (
@@ -142,15 +143,33 @@ function FormattedText({ text }: { text: string }) {
 export function BrowseSession({
   conversationId,
   browserLiveUrl,
+  initialMessages = [],
 }: {
   conversationId: string;
   browserLiveUrl: string | null;
+  initialMessages?: import("ai").UIMessage[];
 }) {
   const [input, setInput] = useState("");
   const [activeScreen, setActiveScreen] = useState<ActiveScreen | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // request geolocation on mount, store in cookie for server access
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const city = tz.split("/").pop()?.replace(/_/g, " ") ?? "";
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.cookie = `user_location=${pos.coords.latitude},${pos.coords.longitude},${city};path=/;max-age=86400;SameSite=Lax`;
+      },
+      () => {
+        document.cookie = `user_location=,,${city};path=/;max-age=86400;SameSite=Lax`;
+      },
+    );
+  }, []);
+
   const { messages, sendMessage, addToolOutput, status } = useChat({
+    messages: initialMessages,
     transport: new DefaultChatTransport({
       api: "/api/chat",
       body: { conversationId },
@@ -212,13 +231,13 @@ export function BrowseSession({
       style={{ colorScheme: "light" }}
     >
       {/* browser iframe + render screen overlay */}
-      <div className="relative min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1 overflow-hidden bg-[#F7F7F5]">
         {browserLiveUrl && (
           <iframe
             src={browserLiveUrl}
-            className="absolute inset-0 h-full w-full border-0"
+            className="h-full w-full border-0"
             title="Browser View"
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            allow="clipboard-read; clipboard-write"
           />
         )}
 
@@ -234,6 +253,7 @@ export function BrowseSession({
             </div>
           </div>
         )}
+
       </div>
 
       {/* chat panel */}
@@ -287,10 +307,9 @@ export function BrowseSession({
                     "toolCallId" in part
                   ) {
                     const isRenderScreen = part.type === "tool-renderScreen";
+                    const isWebSearch = part.type === "tool-webSearch";
 
                     if (part.state === "input-available") {
-                      // only show status for renderScreen (user action needed)
-                      // other tools are just the AI working in the browser
                       return (
                         <div
                           key={`${message.id}-${i}`}
@@ -298,8 +317,10 @@ export function BrowseSession({
                         >
                           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4A4A48]" />
                           {isRenderScreen
-                            ? "Needs your input — check the screen on the left"
-                            : "Browsing..."}
+                            ? "Needs your input, check the screen on the left"
+                            : isWebSearch
+                              ? "Searching the web..."
+                              : "Browsing..."}
                         </div>
                       );
                     }

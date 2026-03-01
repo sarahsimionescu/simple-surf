@@ -81,8 +81,9 @@ model Conversation {
   title            String?
   browserSessionId String?
   browserLiveUrl   String?
-  lastVisitedUrl   String?
-  messages         Message[]
+  lastVisitedUrl     String?
+  lastScreenshotUrl  String?
+  messages           Message[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

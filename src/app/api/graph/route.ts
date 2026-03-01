@@ -13,6 +13,7 @@ export async function GET() {
       Authorization: `Bearer ${env.SUPERMEMORY_API_KEY}`,
     },
     body: JSON.stringify({
+      containerTags: [session.user.id],
       page: 1,
       limit: 500,
       sort: "createdAt",

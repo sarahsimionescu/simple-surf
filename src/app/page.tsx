@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { getSession } from "~/server/better-auth/server";
-import { SignInButton } from "~/app/_components/sign-in-button";
 import { GrainOverlay } from "~/app/_components/grain-overlay";
+import { LandingNav } from "~/app/_components/landing-nav";
 import { LandingHero } from "~/app/_components/landing-hero";
+import { LandingMarquee } from "~/app/_components/landing-marquee";
 import { LandingSteps } from "~/app/_components/landing-steps";
 import { LandingCta } from "~/app/_components/landing-cta";
 
@@ -25,18 +26,7 @@ export default async function Home() {
 
       <GrainOverlay />
 
-      {/* nav */}
-      <nav
-        aria-label="Main navigation"
-        className="landing-reveal fixed top-0 right-0 left-0 z-40 flex items-center justify-between px-8 py-5 backdrop-blur-md bg-[#F7F7F5]/70"
-      >
-        <span className="font-[family-name:var(--font-syne)] text-lg font-bold tracking-tight lowercase">
-          simplesurf
-        </span>
-        <SignInButton className="cursor-pointer rounded-full bg-transparent px-6 py-3 text-base font-semibold text-[#141414] ring-1 ring-[#141414]/20 transition-all duration-300 hover:bg-[#141414] hover:text-[#F7F7F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]">
-          Sign in
-        </SignInButton>
-      </nav>
+      <LandingNav />
 
       <main id="main">
         <LandingHero />
@@ -52,12 +42,9 @@ export default async function Home() {
           </div>
         </section>
 
-        <LandingSteps />
+        <LandingMarquee />
 
-        {/* divider */}
-        <div aria-hidden="true" className="mx-auto max-w-5xl px-6">
-          <div className="h-px bg-[#141414]/[0.06]" />
-        </div>
+        <LandingSteps />
 
         <LandingCta />
       </main>

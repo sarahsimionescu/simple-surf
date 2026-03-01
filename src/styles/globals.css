@@ -156,9 +156,58 @@
   animation-delay: 0.5s;
 }
 
+
+/* button shine sweep on hover */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.2) 45%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.2) 55%,
+    transparent 60%
+  );
+  transform: translateX(-200%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+
+.btn-shine:hover::after {
+  transform: translateX(200%);
+}
+
+/* marquee scroll */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.marquee {
+  animation: marquee-scroll 40s linear infinite;
+}
+
+.marquee-reverse {
+  animation: marquee-scroll 40s linear infinite reverse;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-reveal {
     animation: none;
     opacity: 1;
+  }
+  .btn-shine::after {
+    display: none;
+  }
+  .marquee,
+  .marquee-reverse {
+    animation: none;
   }
 }

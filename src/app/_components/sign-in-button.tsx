@@ -26,7 +26,34 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function SignInButton() {
+export function SignInButton({
+  className,
+  children,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  // simple styled button mode — just triggers google oauth
+  if (className || children) {
+    return (
+      <button
+        className={className}
+        onClick={() =>
+          authClient.signIn.social({
+            provider: "google",
+            callbackURL: "/browse",
+          })
+        }
+      >
+        {children ?? "Sign in with Google"}
+      </button>
+    );
+  }
+
+  return <SignInForm />;
+}
+
+function SignInForm() {
   const router = useRouter();
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState("");
@@ -58,7 +85,7 @@ export function SignInButton() {
         if (result.error) {
           setError(result.error.message ?? "Sign up failed");
         } else {
-          router.push("/browse");
+          router.push("/browse/new");
         }
       } else {
         const result = await authClient.signIn.email({
@@ -68,7 +95,7 @@ export function SignInButton() {
         if (result.error) {
           setError(result.error.message ?? "Sign in failed");
         } else {
-          router.push("/browse");
+          router.push("/browse/new");
         }
       }
     } catch {

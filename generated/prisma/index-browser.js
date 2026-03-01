@@ -173,6 +173,7 @@ exports.Prisma.ConversationScalarFieldEnum = {
   browserSessionId: 'browserSessionId',
   browserLiveUrl: 'browserLiveUrl',
   lastVisitedUrl: 'lastVisitedUrl',
+  lastScreenshotUrl: 'lastScreenshotUrl',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };

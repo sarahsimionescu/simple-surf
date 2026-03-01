@@ -6009,6 +6009,7 @@ export namespace Prisma {
     browserSessionId: string | null
     browserLiveUrl: string | null
     lastVisitedUrl: string | null
+    lastScreenshotUrl: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -6020,6 +6021,7 @@ export namespace Prisma {
     browserSessionId: string | null
     browserLiveUrl: string | null
     lastVisitedUrl: string | null
+    lastScreenshotUrl: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -6031,6 +6033,7 @@ export namespace Prisma {
     browserSessionId: number
     browserLiveUrl: number
     lastVisitedUrl: number
+    lastScreenshotUrl: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -6044,6 +6047,7 @@ export namespace Prisma {
     browserSessionId?: true
     browserLiveUrl?: true
     lastVisitedUrl?: true
+    lastScreenshotUrl?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -6055,6 +6059,7 @@ export namespace Prisma {
     browserSessionId?: true
     browserLiveUrl?: true
     lastVisitedUrl?: true
+    lastScreenshotUrl?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -6066,6 +6071,7 @@ export namespace Prisma {
     browserSessionId?: true
     browserLiveUrl?: true
     lastVisitedUrl?: true
+    lastScreenshotUrl?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -6150,6 +6156,7 @@ export namespace Prisma {
     browserSessionId: string | null
     browserLiveUrl: string | null
     lastVisitedUrl: string | null
+    lastScreenshotUrl: string | null
     createdAt: Date
     updatedAt: Date
     _count: ConversationCountAggregateOutputType | null
@@ -6178,6 +6185,7 @@ export namespace Prisma {
     browserSessionId?: boolean
     browserLiveUrl?: boolean
     lastVisitedUrl?: boolean
+    lastScreenshotUrl?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -6192,6 +6200,7 @@ export namespace Prisma {
     browserSessionId?: boolean
     browserLiveUrl?: boolean
     lastVisitedUrl?: boolean
+    lastScreenshotUrl?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -6204,6 +6213,7 @@ export namespace Prisma {
     browserSessionId?: boolean
     browserLiveUrl?: boolean
     lastVisitedUrl?: boolean
+    lastScreenshotUrl?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -6216,11 +6226,12 @@ export namespace Prisma {
     browserSessionId?: boolean
     browserLiveUrl?: boolean
     lastVisitedUrl?: boolean
+    lastScreenshotUrl?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type ConversationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "title" | "browserSessionId" | "browserLiveUrl" | "lastVisitedUrl" | "createdAt" | "updatedAt", ExtArgs["result"]["conversation"]>
+  export type ConversationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "title" | "browserSessionId" | "browserLiveUrl" | "lastVisitedUrl" | "lastScreenshotUrl" | "createdAt" | "updatedAt", ExtArgs["result"]["conversation"]>
   export type ConversationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     messages?: boolean | Conversation$messagesArgs<ExtArgs>
@@ -6246,6 +6257,7 @@ export namespace Prisma {
       browserSessionId: string | null
       browserLiveUrl: string | null
       lastVisitedUrl: string | null
+      lastScreenshotUrl: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["conversation"]>
@@ -6679,6 +6691,7 @@ export namespace Prisma {
     readonly browserSessionId: FieldRef<"Conversation", 'String'>
     readonly browserLiveUrl: FieldRef<"Conversation", 'String'>
     readonly lastVisitedUrl: FieldRef<"Conversation", 'String'>
+    readonly lastScreenshotUrl: FieldRef<"Conversation", 'String'>
     readonly createdAt: FieldRef<"Conversation", 'DateTime'>
     readonly updatedAt: FieldRef<"Conversation", 'DateTime'>
   }
@@ -9263,6 +9276,7 @@ export namespace Prisma {
     browserSessionId: 'browserSessionId',
     browserLiveUrl: 'browserLiveUrl',
     lastVisitedUrl: 'lastVisitedUrl',
+    lastScreenshotUrl: 'lastScreenshotUrl',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -9678,6 +9692,7 @@ export namespace Prisma {
     browserSessionId?: StringNullableFilter<"Conversation"> | string | null
     browserLiveUrl?: StringNullableFilter<"Conversation"> | string | null
     lastVisitedUrl?: StringNullableFilter<"Conversation"> | string | null
+    lastScreenshotUrl?: StringNullableFilter<"Conversation"> | string | null
     createdAt?: DateTimeFilter<"Conversation"> | Date | string
     updatedAt?: DateTimeFilter<"Conversation"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
@@ -9691,6 +9706,7 @@ export namespace Prisma {
     browserSessionId?: SortOrderInput | SortOrder
     browserLiveUrl?: SortOrderInput | SortOrder
     lastVisitedUrl?: SortOrderInput | SortOrder
+    lastScreenshotUrl?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
@@ -9707,6 +9723,7 @@ export namespace Prisma {
     browserSessionId?: StringNullableFilter<"Conversation"> | string | null
     browserLiveUrl?: StringNullableFilter<"Conversation"> | string | null
     lastVisitedUrl?: StringNullableFilter<"Conversation"> | string | null
+    lastScreenshotUrl?: StringNullableFilter<"Conversation"> | string | null
     createdAt?: DateTimeFilter<"Conversation"> | Date | string
     updatedAt?: DateTimeFilter<"Conversation"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
@@ -9720,6 +9737,7 @@ export namespace Prisma {
     browserSessionId?: SortOrderInput | SortOrder
     browserLiveUrl?: SortOrderInput | SortOrder
     lastVisitedUrl?: SortOrderInput | SortOrder
+    lastScreenshotUrl?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: ConversationCountOrderByAggregateInput
@@ -9737,6 +9755,7 @@ export namespace Prisma {
     browserSessionId?: StringNullableWithAggregatesFilter<"Conversation"> | string | null
     browserLiveUrl?: StringNullableWithAggregatesFilter<"Conversation"> | string | null
     lastVisitedUrl?: StringNullableWithAggregatesFilter<"Conversation"> | string | null
+    lastScreenshotUrl?: StringNullableWithAggregatesFilter<"Conversation"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Conversation"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Conversation"> | Date | string
   }
@@ -10187,6 +10206,7 @@ export namespace Prisma {
     browserSessionId?: string | null
     browserLiveUrl?: string | null
     lastVisitedUrl?: string | null
+    lastScreenshotUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutConversationsInput
@@ -10200,6 +10220,7 @@ export namespace Prisma {
     browserSessionId?: string | null
     browserLiveUrl?: string | null
     lastVisitedUrl?: string | null
+    lastScreenshotUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
@@ -10211,6 +10232,7 @@ export namespace Prisma {
     browserSessionId?: NullableStringFieldUpdateOperationsInput | string | null
     browserLiveUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastVisitedUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastScreenshotUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
@@ -10224,6 +10246,7 @@ export namespace Prisma {
     browserSessionId?: NullableStringFieldUpdateOperationsInput | string | null
     browserLiveUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastVisitedUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastScreenshotUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
@@ -10236,6 +10259,7 @@ export namespace Prisma {
     browserSessionId?: string | null
     browserLiveUrl?: string | null
     lastVisitedUrl?: string | null
+    lastScreenshotUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -10246,6 +10270,7 @@ export namespace Prisma {
     browserSessionId?: NullableStringFieldUpdateOperationsInput | string | null
     browserLiveUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastVisitedUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastScreenshotUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -10257,6 +10282,7 @@ export namespace Prisma {
     browserSessionId?: NullableStringFieldUpdateOperationsInput | string | null
     browserLiveUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastVisitedUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastScreenshotUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -10710,6 +10736,7 @@ export namespace Prisma {
     browserSessionId?: SortOrder
     browserLiveUrl?: SortOrder
     lastVisitedUrl?: SortOrder
+    lastScreenshotUrl?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -10721,6 +10748,7 @@ export namespace Prisma {
     browserSessionId?: SortOrder
     browserLiveUrl?: SortOrder
     lastVisitedUrl?: SortOrder
+    lastScreenshotUrl?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -10732,6 +10760,7 @@ export namespace Prisma {
     browserSessionId?: SortOrder
     browserLiveUrl?: SortOrder
     lastVisitedUrl?: SortOrder
+    lastScreenshotUrl?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -11407,6 +11436,7 @@ export namespace Prisma {
     browserSessionId?: string | null
     browserLiveUrl?: string | null
     lastVisitedUrl?: string | null
+    lastScreenshotUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageCreateNestedManyWithoutConversationInput
@@ -11418,6 +11448,7 @@ export namespace Prisma {
     browserSessionId?: string | null
     browserLiveUrl?: string | null
     lastVisitedUrl?: string | null
+    lastScreenshotUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     messages?: MessageUncheckedCreateNestedManyWithoutConversationInput
@@ -11551,6 +11582,7 @@ export namespace Prisma {
     browserSessionId?: StringNullableFilter<"Conversation"> | string | null
     browserLiveUrl?: StringNullableFilter<"Conversation"> | string | null
     lastVisitedUrl?: StringNullableFilter<"Conversation"> | string | null
+    lastScreenshotUrl?: StringNullableFilter<"Conversation"> | string | null
     createdAt?: DateTimeFilter<"Conversation"> | Date | string
     updatedAt?: DateTimeFilter<"Conversation"> | Date | string
   }
@@ -11816,6 +11848,7 @@ export namespace Prisma {
     browserSessionId?: string | null
     browserLiveUrl?: string | null
     lastVisitedUrl?: string | null
+    lastScreenshotUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutConversationsInput
@@ -11828,6 +11861,7 @@ export namespace Prisma {
     browserSessionId?: string | null
     browserLiveUrl?: string | null
     lastVisitedUrl?: string | null
+    lastScreenshotUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -11854,6 +11888,7 @@ export namespace Prisma {
     browserSessionId?: NullableStringFieldUpdateOperationsInput | string | null
     browserLiveUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastVisitedUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastScreenshotUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutConversationsNestedInput
@@ -11866,6 +11901,7 @@ export namespace Prisma {
     browserSessionId?: NullableStringFieldUpdateOperationsInput | string | null
     browserLiveUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastVisitedUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastScreenshotUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11908,6 +11944,7 @@ export namespace Prisma {
     browserSessionId?: string | null
     browserLiveUrl?: string | null
     lastVisitedUrl?: string | null
+    lastScreenshotUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -12014,6 +12051,7 @@ export namespace Prisma {
     browserSessionId?: NullableStringFieldUpdateOperationsInput | string | null
     browserLiveUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastVisitedUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastScreenshotUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUpdateManyWithoutConversationNestedInput
@@ -12025,6 +12063,7 @@ export namespace Prisma {
     browserSessionId?: NullableStringFieldUpdateOperationsInput | string | null
     browserLiveUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastVisitedUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastScreenshotUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     messages?: MessageUncheckedUpdateManyWithoutConversationNestedInput
@@ -12036,6 +12075,7 @@ export namespace Prisma {
     browserSessionId?: NullableStringFieldUpdateOperationsInput | string | null
     browserLiveUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastVisitedUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastScreenshotUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

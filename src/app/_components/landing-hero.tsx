@@ -1,5 +1,6 @@
 import { SignInButton } from "~/app/_components/sign-in-button";
 import { ArrowIcon } from "~/app/_components/arrow-icon";
+import { BounceDot } from "~/app/_components/bounce-dot";
 
 export function LandingHero() {
   return (
@@ -10,21 +11,20 @@ export function LandingHero() {
       <div className="max-w-5xl text-center">
         <h1
           id="hero-heading"
-          className="landing-reveal font-[family-name:var(--font-syne)] text-[clamp(2.25rem,9vw,9rem)] font-extrabold lowercase leading-[0.95] tracking-[-0.02em]"
+          className="landing-reveal font-[family-name:var(--font-syne)] text-[clamp(2.25rem,8vw,7rem)] font-extrabold lowercase leading-[0.95] tracking-[-0.02em]"
         >
           the internet,
           <br />
-          <span className="md:whitespace-nowrap">
+          <BounceDot>
             <span className="text-[#0077B6]">made easy</span>
-            <span className="text-[#0077B6]/40">.</span>
-          </span>
+          </BounceDot>
         </h1>
         <p className="landing-reveal landing-reveal-delay-1 mx-auto mt-8 max-w-lg text-xl leading-relaxed text-[#4A4A48] md:text-2xl">
           SimpleSurf browses the web for you. Just describe what
           you&apos;re looking for. No computer skills needed.
         </p>
         <div className="landing-reveal landing-reveal-delay-2 mt-12 flex flex-col items-center gap-3">
-          <SignInButton className="group relative cursor-pointer rounded-full bg-[#141414] px-12 py-5 text-lg font-semibold text-[#F7F7F5] transition-all duration-500 hover:bg-[#0077B6] hover:shadow-[0_0_40px_rgba(0,119,182,0.3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]">
+          <SignInButton className="btn-shine group relative cursor-pointer rounded-full bg-[#141414] px-12 py-5 text-lg font-semibold text-[#F7F7F5] transition-all duration-500 hover:bg-[#0077B6] hover:shadow-[0_0_40px_rgba(0,119,182,0.3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]">
             <span className="flex items-center gap-3">
               Get started, it&apos;s free
               <ArrowIcon />

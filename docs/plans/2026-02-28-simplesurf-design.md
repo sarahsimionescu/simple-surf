@@ -1,146 +1,162 @@
-# SimpleSurf Design
+# SimpleSurf Design Document
 
-An AI browsing assistant for elderly users. Chat and voice interface alongside a live browser view, powered by Browser Use Cloud and Claude.
+**Date:** 2026-02-28
+
+## Overview
+
+SimpleSurf is an AI-powered browsing assistant for elderly users. Users communicate with a Claude-powered agent through a text chat interface. The agent browses the web on their behalf using Browser Use Cloud and collects structured input through "render screens."
 
 ## Architecture
 
-Single Next.js codebase (existing T3 stack). No Python backend.
-
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Next.js App                        │
-│                                                      │
-│  ┌──────────────┐        ┌────────────────────────┐  │
-│  │  Chat Panel   │        │  Browser View (iframe) │  │
-│  │  Voice In/Out │        │  Browser Use Cloud     │  │
-│  │  Text Chat    │        │  Live Session URL      │  │
-│  └──────┬───────┘        └────────────────────────┘  │
-│         │ WebSocket                                   │
-├─────────┼────────────────────────────────────────────┤
-│         ▼                                            │
-│  ┌──────────────┐   ┌──────────┐   ┌──────────────┐ │
-│  │  WS Handler  │──▶│  Claude   │──▶│ Browser Use  │ │
-│  │  (API Route) │   │  (Agent)  │   │ Cloud API    │ │
-│  └──────────────┘   └──────────┘   └──────────────┘ │
-│                                                      │
-│  ┌──────────┐  ┌──────────┐  ┌───────────────────┐  │
-│  │  Prisma  │  │  tRPC    │  │  Better Auth      │  │
-│  │  (DB)    │  │ (app API)│  │  (sessions/users) │  │
-│  └──────────┘  └──────────┘  └───────────────────┘  │
-└─────────────────────────────────────────────────────┘
-
-External Services:
-  - Browser Use Cloud: browser automation + live session
-  - Deepgram: speech-to-text (client-side JS SDK)
-  - ElevenLabs: text-to-speech (server-side)
-  - Anthropic: Claude (chat reasoning)
-```
-
-## Frontend Layout
-
-Side-by-side: 60% browser view (iframe), 40% chat panel. Stacks vertically on mobile.
-
-```
+┌─────────────────────────────────────────────────────────┐
+│                      Browser (Client)                    │
+│                                                          │
+│  ┌──────────────────────────┐  ┌──────────────────────┐ │
+│  │     Main Content (60%)    │  │   Chat Panel (40%)   │ │
+│  │                           │  │                      │ │
+│  │  Browser Use liveUrl      │  │  Message list         │ │
+│  │  iframe (always visible)  │  │  (useChat hook)      │ │
+│  │                           │  │                      │ │
+│  │  Render Screen            │  │  Text input           │ │
+│  │  (overlays when active)   │  │                      │ │
+│  └──────────────────────────┘  └──────────────────────┘ │
+└──────────────────┬──────────────────────────────────────┘
+                   │ useChat (stream)
+                   ▼
 ┌──────────────────────────────────────────────────────────┐
-│  SimpleSurf          [Settings]              [Sign Out]   │
-├────────────────────────┬─────────────────────────────────┤
-│                        │                                 │
-│    Browser View        │     Chat Panel                  │
-│    (iframe)            │     - Message history            │
-│                        │     - Voice button (hold/toggle) │
-│    User can click      │     - Text input + send          │
-│    to override AI      │                                 │
-│                        │                                 │
-├────────────────────────┴─────────────────────────────────┤
-│  Status: Navigating to bankofamerica.com...              │
-└──────────────────────────────────────────────────────────┘
+│              POST /api/chat (Next.js Route)              │
+│                                                          │
+│  streamText({                                            │
+│    model: supermemory(gateway('anthropic/claude-...'))    │
+│    tools: { browse, renderScreen }                       │
+│    stopWhen: stepCountIs(10)                             │
+│  })                                                      │
+└──────┬───────────────────────────┬──────────────────────┘
+       │                           │
+       ▼                           ▼
+┌──────────────┐         ┌──────────────────┐
+│ Browser Use  │         │  renderScreen    │
+│ Cloud API    │         │  (client-side    │
+│              │         │   tool — no      │
+│ POST /tasks  │         │   execute fn)    │
+│ GET /status  │         └──────────────────┘
+└──────────────┘
 ```
 
-### UX Principles
+### Agent-as-Orchestrator Pattern
 
-- Large text (18-20px base), large click targets (min 48px)
-- High contrast, no subtle grays
-- Simple language from the AI, no jargon
-- Status bar always shows what's happening
-- Prominent voice button
-- No initial URL required — AI asks what the user wants to do
+The Vercel AI SDK agent orchestrates everything. Browser Use Cloud and render screen are tools the agent calls. The agent decides when to browse and when to ask the user for input.
 
-## Data Flow
+**Flow example:** User says "Book me a flight" → Agent calls `browse("search flights on Google Flights")` → Gets results → Calls `renderScreen({ type: "select-one", prompt: "Which flight?", options: [...] })` → User picks → Agent calls `browse("click on flight option 2")` → etc.
 
-```
-User speaks/types
-  → Deepgram STT (client-side) transcribes voice to text
-  → WebSocket sends text to server
-  → Server saves to conversation history (Prisma)
-  → Server sends to Claude with conversation context
-  → Claude returns:
-      1. User-facing message (simple language)
-      2. Browser Use task (if needed)
-  → Server sends user-facing message via WebSocket
-      → Client displays in chat + ElevenLabs TTS speaks it
-  → Server calls Browser Use Cloud API with task
-      → Gets live session URL
-      → Sends URL via WebSocket → client loads in iframe
-```
+## Tools
 
-### WebSocket Message Types
+### `browse` (server-side tool)
 
-| Direction | Type | Payload |
-|---|---|---|
-| Client → Server | `chat_message` | `{ text: string }` |
-| Client → Server | `voice_audio` | `{ text: string }` (transcribed client-side) |
-| Server → Client | `assistant_message` | `{ text: string, audio?: string }` |
-| Server → Client | `browser_session` | `{ liveUrl: string, status: string }` |
-| Server → Client | `status_update` | `{ message: string }` |
+Calls Browser Use Cloud API to perform browser actions within the conversation's session.
 
-## Database Schema Additions
+- **Input:** `instruction` (string) — natural language instruction for the browser agent
+- **Execution:** Creates a Browser Use Cloud task within the session, polls until complete, returns result text
+- **Output:** Text result from the browser agent
 
-Two new tables added to existing Prisma schema:
+### `renderScreen` (client-side tool, no execute function)
+
+Shows structured UI to collect user input. Handled on the frontend via the AI SDK's `addToolOutput` mechanism.
+
+- **Input:**
+  - `type`: `select-one` | `select-multi` | `text` | `auth`
+  - `prompt`: string — what to ask the user
+  - `options`: string[] (optional) — for select types
+- **No execute function** — forwarded to the client
+
+### Render Screen Types
+
+| Type | UI | User Action |
+|------|-----|------------|
+| `select-one` | Large buttons/cards with options, prompt at top | Click one → sent as tool output |
+| `select-multi` | Checkboxes with options, prompt at top, Submit button | Check + submit → sent as tool output |
+| `text` | Prompt at top, large text input, Submit button | Type + submit → sent as tool output |
+| `auth` | Message to log in in browser, Done button, iframe visible | Click Done → sent as tool output |
+
+## Data Model
 
 ```prisma
 model Conversation {
-  id        String    @id @default(cuid())
-  title     String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages  Message[]
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String?
+  browserSessionId String?
+  browserLiveUrl   String?
+  messages         Message[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 model Message {
   id             String       @id @default(cuid())
-  role           String       // "user" or "assistant"
-  content        String
-  browserTaskId  String?
-  browserStatus  String?      // "running", "completed", "failed"
-  createdAt      DateTime     @default(now())
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  createdAt      DateTime     @default(now())
 }
 ```
 
-Existing tables (User, Session, Account, Verification, Post) remain unchanged.
+### Browser Session Lifecycle
 
-## External Services & Environment Variables
+1. User creates a new conversation → API creates a Browser Use Cloud session → stores `sessionId` + `liveUrl`
+2. Each agent `browse` call creates a task within that session (persistent cookies/auth)
+3. User ends conversation or timeout → API deletes the Browser Use session
 
-| Service | Purpose | Env Var |
-|---|---|---|
-| Browser Use Cloud | Browser automation | `BROWSER_USE_API_KEY` |
-| Anthropic | Claude reasoning | `ANTHROPIC_API_KEY` |
-| Deepgram | STT (client-side) | `NEXT_PUBLIC_DEEPGRAM_API_KEY` |
-| Deepgram | STT (server token gen) | `DEEPGRAM_API_KEY` |
-| ElevenLabs | TTS (server-side) | `ELEVENLABS_API_KEY` |
+## API Route
 
-## Error Handling
+Single route: `POST /api/chat`
 
-- **Browser Use fails/times out**: AI tells user, offers to retry. Status bar shows error.
-- **Bad voice transcription**: Show transcript in chat, ask user to confirm or correct via text.
-- **WebSocket disconnects**: Auto-reconnect with backoff. History preserved in Postgres.
-- **User clicks in iframe during AI action**: AI unaware of iframe clicks. User can tell AI "I clicked something" and AI reassesses.
-- **Long-running tasks**: Status bar keeps user informed. Claude proactively updates after 60s.
-- **Auth session expires**: Better Auth handles it. User redirected to sign in.
+**Model stack:** Vercel AI Gateway (`anthropic/claude-sonnet-4`) → Supermemory wrapper (per-user long-term memory) → Cache middleware (Upstash Redis)
 
-## Control Model
+**Configuration:**
+- `streamText` with `stopWhen: stepCountIs(10)` for multi-step tool chains
+- `convertToModelMessages` to convert `UIMessage[]` to model format
+- Returns `result.toUIMessageStreamResponse()`
+- Messages saved to PostgreSQL asynchronously
 
-AI-primary, user can override. The AI drives the browser by default. User watches and converses. User can click in the iframe if they want — the AI adapts when informed.
+## Frontend
+
+### Page Layout (`/browse`)
+
+- **Left 60%:** Browser Use `liveUrl` in an iframe. When a render screen is active, it overlays on top.
+- **Right 40%:** Chat panel with message list and text input.
+
+### Chat Integration
+
+- `useChat` hook from `@ai-sdk/react`
+- `sendMessage` for sending user messages
+- `addToolOutput` for responding to render screen tool calls
+- `sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls` for auto-continuing after tool outputs
+- Tool parts rendered inline: `tool-renderScreen` with states `input-streaming` → `input-available` → `output-available`
+
+### Design Principles (Elderly Users)
+
+- Large text (18px+ base), high contrast
+- Big click targets (48px+ touch targets)
+- Simple language in prompts
+- Clear visual feedback during loading
+- No tiny buttons or complex interactions
+
+## External Services
+
+| Service | Env Var | Purpose |
+|---------|---------|---------|
+| Vercel AI Gateway | `AI_GATEWAY_API_KEY` | LLM access (Claude) |
+| Browser Use Cloud | `BROWSER_USE_API_KEY` | Browser automation |
+| Supermemory | `SUPERMEMORY_API_KEY` | Long-term user memory |
+| Upstash Redis | `KV_URL`, `KV_TOKEN` | Cache middleware |
+| PostgreSQL | `DATABASE_URL` | Chat history & conversations |
+| Better Auth | `BETTER_AUTH_SECRET` | Session management |
+| Google OAuth | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Login |
+
+## Authentication
+
+Existing Google OAuth via Better Auth. Users must log in to use the app. Conversations are tied to authenticated users.

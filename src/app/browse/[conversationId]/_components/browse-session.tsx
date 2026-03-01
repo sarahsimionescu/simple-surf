@@ -8,6 +8,7 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
 } from "ai";
 import { RenderScreen } from "~/app/_components/render-screen";
+import { useStreamingTTS } from "~/hooks/use-streaming-tts";
 import Link from "next/link";
 
 function clog(tag: string, ...args: unknown[]) {
@@ -173,6 +174,7 @@ export function BrowseSession({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const sentViaMicRef = useRef(false);
+  const streamingTTS = useStreamingTTS();
 
   // Log mount
   useEffect(() => {
@@ -268,28 +270,42 @@ export function BrowseSession({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Auto-play TTS when AI finishes responding to a voice message
-  const prevStatusForTTS = useRef(status);
+  // Start streaming TTS when AI begins responding to a voice message
+  const ttsStartedRef = useRef(false);
   useEffect(() => {
-    const wasStreaming = prevStatusForTTS.current === "streaming" || prevStatusForTTS.current === "submitted";
-    const nowReady = status === "ready";
-    prevStatusForTTS.current = status;
+    const isStreaming = status === "streaming" || status === "submitted";
 
-    if (wasStreaming && nowReady && sentViaMicRef.current) {
-      // Get the last assistant text
-      const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
-      if (lastAssistant) {
-        const textParts = lastAssistant.parts
-          .filter((p): p is { type: "text"; text: string } => p.type === "text")
-          .map((p) => p.text)
-          .join(" ");
-        if (textParts.trim()) {
-          sentViaMicRef.current = false;
-          void playTTS(textParts);
-        }
-      }
+    // Start TTS when streaming begins and we're in voice mode
+    if (isStreaming && sentViaMicRef.current && !ttsStartedRef.current) {
+      ttsStartedRef.current = true;
+      void streamingTTS.start();
     }
-  }, [status, messages]);
+
+    // When streaming ends, flush remaining audio and reset
+    if (status === "ready" && ttsStartedRef.current) {
+      ttsStartedRef.current = false;
+      sentViaMicRef.current = false;
+      streamingTTS.finish();
+    }
+  }, [status, streamingTTS]);
+
+  // Pipe text deltas to the streaming TTS as they arrive
+  useEffect(() => {
+    if (!streamingTTS.isActive()) return;
+
+    // Find the latest assistant message and extract its text
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    if (!lastAssistant) return;
+
+    const textParts = lastAssistant.parts
+      .filter((p): p is { type: "text"; text: string } => p.type === "text")
+      .map((p) => p.text)
+      .join(" ");
+
+    if (textParts.trim()) {
+      streamingTTS.sendText(textParts);
+    }
+  }, [messages, streamingTTS]);
 
   // scan messages for active renderScreen tool calls
   useEffect(() => {
@@ -374,6 +390,9 @@ export function BrowseSession({
   };
 
   const startRecording = async () => {
+    // Stop any active streaming TTS
+    streamingTTS.stop();
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);

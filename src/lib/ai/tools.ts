@@ -1,8 +1,18 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { runBrowserTask } from "~/server/services/browser-use";
+import { db } from "~/server/db";
 
-export function createBrowseTool(browserSessionId: string) {
+// extract the first url from a string
+function extractUrl(text: string): string | null {
+  const match = /https?:\/\/[^\s)"',]+/i.exec(text);
+  return match?.[0] ?? null;
+}
+
+export function createBrowseTool(
+  browserSessionId: string,
+  conversationId: string,
+) {
   return tool({
     description:
       "Browse the web on behalf of the user. Give a natural language instruction for what to do in the browser.",
@@ -15,6 +25,16 @@ export function createBrowseTool(browserSessionId: string) {
     }),
     execute: async ({ instruction }) => {
       const result = await runBrowserTask(browserSessionId, instruction);
+
+      // update lastVisitedUrl from output or instruction
+      const url = extractUrl(result.output) ?? extractUrl(instruction);
+      if (url) {
+        await db.conversation.update({
+          where: { id: conversationId },
+          data: { lastVisitedUrl: url },
+        });
+      }
+
       return result.output;
     },
   });

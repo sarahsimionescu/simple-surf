@@ -183,23 +183,35 @@ export async function POST(req: Request) {
     "STREAM",
     "Starting streamText with tools: browse, webSearch, renderScreen, recordTask",
   );
-  // Fix up broken tool-call parts:
-  // - Errored parts with no input get stripped (would cause API errors)
-  // - Unanswered/errored parts with valid input get "No answer" as output
+  // Fix up broken tool-call parts so the chat NEVER breaks:
+  // - Strip parts with no valid input (streaming, errored, malformed)
+  // - Auto-answer unanswered/errored parts with "No answer"
   for (const m of messages) {
     for (let i = 0; i < m.parts.length; i++) {
       const p = m.parts[i]!;
       if (!("state" in p && "toolCallId" in p)) continue;
-      // Strip errored parts with no input — can't send to API
-      if (p.state === "output-error" && !("input" in p && p.input != null)) {
-        log("SANITIZE", `Stripped errored tool part (no input): ${p.type}`);
+
+      const hasValidInput = "input" in p && p.input != null && typeof p.input === "object";
+
+      // Strip any part without valid input — can't send to API
+      if (!hasValidInput) {
+        log("SANITIZE", `Stripped tool part (no valid input): ${p.type} state=${p.state}`);
         m.parts.splice(i, 1);
         i--;
         continue;
       }
+
+      // Strip parts still streaming (incomplete tool calls from interrupted streams)
+      if (p.state === "input-streaming") {
+        log("SANITIZE", `Stripped incomplete streaming tool part: ${p.type}`);
+        m.parts.splice(i, 1);
+        i--;
+        continue;
+      }
+
       // Auto-answer unanswered or errored tool calls with "No answer"
       if (p.state === "output-error" || p.state === "input-available") {
-        log("SANITIZE", `Auto-answered abandoned tool part: ${p.type}`);
+        log("SANITIZE", `Auto-answered abandoned tool part: ${p.type} state=${p.state}`);
         Object.assign(p, { state: "output-available", output: "No answer", errorText: undefined });
       }
     }

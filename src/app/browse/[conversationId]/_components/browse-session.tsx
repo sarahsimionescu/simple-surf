@@ -290,25 +290,10 @@ export function BrowseSession({
     // When streaming ends, flush remaining audio and reset
     if (status === "ready" && ttsStartedRef.current) {
       ttsStartedRef.current = false;
-      const wasMic = sentViaMicRef.current;
       sentViaMicRef.current = false;
-
-      if (streamingTTS.isActive()) {
-        // Streaming TTS worked, just flush
-        streamingTTS.finish();
-      } else if (wasMic) {
-        // Streaming TTS failed to connect, fall back to batch TTS
-        const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
-        if (lastAssistant) {
-          const textParts = lastAssistant.parts
-            .filter((p): p is { type: "text"; text: string } => p.type === "text")
-            .map((p) => p.text)
-            .join(" ");
-          if (textParts.trim()) void playTTS(textParts);
-        }
-      }
+      streamingTTS.finish();
     }
-  }, [status, streamingTTS, messages]);
+  }, [status, streamingTTS]);
 
   // Pipe text deltas to the streaming TTS as they arrive
   useEffect(() => {

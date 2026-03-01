@@ -30,6 +30,7 @@ export function useStreamingTTS(): StreamingTTSControls {
   const nextPlayTimeRef = useRef(0);
   const activeRef = useRef(false);
   const sentLengthRef = useRef(0);
+  const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const preBufferRef = useRef<string[]>([]);
   const playbackStartedRef = useRef(false);
 
@@ -127,6 +128,14 @@ export function useStreamingTTS(): StreamingTTSControls {
           generation_config: { chunk_length_schedule: [120, 160, 250, 290] },
         }),
       );
+      // Keep-alive: send a space every 15s to prevent 20s idle timeout
+      if (keepAliveRef.current) clearInterval(keepAliveRef.current);
+      keepAliveRef.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          clog("WS", "Sending keep-alive");
+          ws.send(JSON.stringify({ text: " ", try_trigger_generation: false }));
+        }
+      }, 15_000);
     };
 
     let chunkCount = 0;
@@ -168,6 +177,7 @@ export function useStreamingTTS(): StreamingTTSControls {
 
     ws.onclose = (event) => {
       clog("WS", `Closed (code=${event.code} reason="${event.reason}")`);
+      if (keepAliveRef.current) { clearInterval(keepAliveRef.current); keepAliveRef.current = null; }
       // Flush any remaining pre-buffered audio on close
       if (!playbackStartedRef.current && preBufferRef.current.length > 0) {
         flushPreBuffer();
@@ -214,6 +224,7 @@ export function useStreamingTTS(): StreamingTTSControls {
   const stop = useCallback(() => {
     if (!activeRef.current && !wsRef.current) return;
     clog("STOP", "Stopping streaming TTS");
+    if (keepAliveRef.current) { clearInterval(keepAliveRef.current); keepAliveRef.current = null; }
     // Close WebSocket
     if (wsRef.current) {
       if (wsRef.current.readyState === WebSocket.OPEN) {

@@ -183,7 +183,24 @@ export async function POST(req: Request) {
     "STREAM",
     "Starting streamText with tools: browse, webSearch, renderScreen, recordTask",
   );
-  const modelMessages = await convertToModelMessages(messages);
+  // Strip errored tool-call parts with missing input — these cause
+  // "tool_use.input is invalid" API errors when conversations are reloaded.
+  const sanitizedMessages = messages.map((m) => ({
+    ...m,
+    parts: m.parts.filter((p) => {
+      if (
+        "state" in p &&
+        p.state === "output-error" &&
+        "toolCallId" in p &&
+        !("input" in p && p.input != null)
+      ) {
+        log("SANITIZE", `Stripped errored tool part: ${p.type}`);
+        return false;
+      }
+      return true;
+    }),
+  }));
+  const modelMessages = await convertToModelMessages(sanitizedMessages);
   log("STREAM", "Converted to", modelMessages.length, "model messages");
 
   const result = streamText({

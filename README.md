@@ -12,28 +12,44 @@ Simple Surf addresses this challenge by transforming the web into a conversation
 
 ## Features
 
-- **Conversational Interface**: Interact with websites using natural language through voice or text
-- **AI-Powered Browsing**: An intelligent agent navigates websites and performs tasks on behalf of the user
-- **Senior-Friendly Design**: Large, clear interface optimized for elderly users
-- **Guided Interactions**: Step-by-step assistance for complex web tasks
-- **Accessibility First**: Built from the ground up with accessibility in mind
+- **Conversational Browsing** — Chat with an AI agent that navigates websites and performs tasks on your behalf
+- **Voice Chat** — Hold-to-talk microphone with speech-to-text input and automatic text-to-speech on AI responses
+- **Smart Screen Summaries** — The AI summarizes web pages and asks clarifying questions to guide you step by step
+- **Web Search** — Find information through natural conversation without navigating complex search engines
+- **Senior-Friendly Design** — Large, clear interface with minimal cognitive load, built for accessibility
+
+## How It Works
+
+```mermaid
+flowchart LR
+    User["👤 User"] -->|"Text or Voice"| Chat["💬 Chat"]
+    Chat -->|"Message"| AI["🤖 AI Agent"]
+    AI -->|"Browse task"| Browser["🌐 Cloud Browser"]
+    Browser -->|"Page summary"| AI
+    AI -->|"Response"| Chat
+    Chat -->|"Text + Audio"| User
+```
+
+The user sends a message through the chat interface using text or voice. The AI agent decides whether to search the web, browse to a website, or respond directly. When browsing is needed, the agent controls a cloud browser session, reads and summarizes the page, and asks follow-up questions to guide the user. Responses are delivered as text, and automatically read aloud when the user sent their message via voice.
 
 ## Tech Stack
 
-This project is built with the [T3 Stack](https://create.t3.gg/):
-
-- [Next.js](https://nextjs.org) - React framework
-- [NextAuth.js](https://next-auth.js.org) - Authentication
-- [Prisma](https://prisma.io) - Database ORM
-- [Tailwind CSS](https://tailwindcss.com) - Styling
-- [tRPC](https://trpc.io) - Type-safe API
+- [Next.js 15](https://nextjs.org) + React 19 — App framework
+- [Vercel AI SDK](https://sdk.vercel.ai) + AI Gateway — LLM orchestration
+- [BrowserUse SDK](https://browseruse.com) — Cloud browser automation
+- [ElevenLabs](https://elevenlabs.io) — Speech-to-text and text-to-speech
+- [better-auth](https://www.better-auth.com) — Authentication (Google OAuth)
+- [Prisma](https://prisma.io) + PostgreSQL — Database
+- [Upstash Redis](https://upstash.com) — Session state
+- [Tailwind CSS](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) — Styling
+- [tRPC](https://trpc.io) — Type-safe API
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- npm or yarn
+- [pnpm](https://pnpm.io)
 - PostgreSQL database
 
 ### Installation
@@ -41,14 +57,14 @@ This project is built with the [T3 Stack](https://create.t3.gg/):
 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/simple-surf.git
+git clone https://github.com/sarahsimionescu/simple-surf.git
 cd simple-surf
 ```
 
 2. Install dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 3. Set up environment variables
@@ -57,18 +73,18 @@ npm install
 cp .env.example .env
 ```
 
-4. Update the `.env` file with your database credentials and other required values
+4. Fill in the `.env` file with your credentials (see `.env.example` for required variables)
 
-5. Run database migrations
+5. Push the database schema
 
 ```bash
-npx prisma migrate dev
+pnpm db:push
 ```
 
 6. Start the development server
 
 ```bash
-npm run dev
+pnpm dev:local
 ```
 
 7. Open [http://localhost:3000](http://localhost:3000) in your browser

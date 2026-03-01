@@ -59,49 +59,56 @@ export default async function Home() {
           aria-hidden="true"
         >
           <defs>
+            {/* ocean gradients blend into each other */}
             <linearGradient id="ocean1" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#29ABE2" />
-              <stop offset="100%" stopColor="#0077B6" />
+              <stop offset="0%" stopColor="#7ECCE5" />
+              <stop offset="60%" stopColor="#29ABE2" />
+              <stop offset="100%" stopColor="#0099DD" />
             </linearGradient>
             <linearGradient id="ocean2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0099DD" />
-              <stop offset="100%" stopColor="#005F8C" />
+              <stop offset="0%" stopColor="#29ABE2" />
+              <stop offset="50%" stopColor="#0099DD" />
+              <stop offset="100%" stopColor="#0088CC" />
             </linearGradient>
             <linearGradient id="ocean3" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0088CC" />
-              <stop offset="100%" stopColor="#004E73" />
+              <stop offset="0%" stopColor="#0099DD" />
+              <stop offset="40%" stopColor="#0088CC" />
+              <stop offset="100%" stopColor="#005F8C" />
             </linearGradient>
-            <linearGradient id="sand" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#F2D98B" />
-              <stop offset="100%" stopColor="#E8C96A" />
-            </linearGradient>
+            {/* ocean to sand transition */}
             <linearGradient id="wet-sand" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#D4B87A" />
-              <stop offset="100%" stopColor="#C4A862" />
+              <stop offset="100%" stopColor="#D4B87A" />
+            </linearGradient>
+            <linearGradient id="sand" x1="0.15" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#D4B87A" />
+              <stop offset="50%" stopColor="#F2D98B" />
+              <stop offset="100%" stopColor="#E8C96A" />
             </linearGradient>
           </defs>
 
           {/* page bg fill behind everything */}
           <rect width="1440" height="200" fill="#F7F7F5" />
-          {/* far ocean - starts lower with wavy top edge */}
-          <path d="M0 30 Q240 15 480 28 Q720 40 960 25 Q1200 10 1440 22 L1440 200 L0 200 Z" fill="url(#ocean1)" />
-          {/* mid wave - overlaps far ocean */}
-          <path d="M0 30 Q180 15 360 35 Q540 55 720 30 Q900 5 1080 30 Q1260 55 1440 35 L1440 200 L0 200 Z" fill="url(#ocean2)" />
+          {/* far ocean */}
+          <path d="M0 18 C100 6, 220 40, 380 12 C480 -2, 620 36, 760 24 C860 16, 1020 44, 1160 10 C1300 -4, 1400 28, 1440 22 L1440 200 L0 200 Z" fill="url(#ocean1)" />
+          {/* mid wave */}
+          <path d="M0 46 C140 22, 260 54, 400 38 C500 28, 580 60, 700 32 C820 8, 940 52, 1060 42 C1140 36, 1300 58, 1440 28 L1440 200 L0 200 Z" fill="url(#ocean2)" />
           {/* foam highlight */}
-          <path d="M0 33 Q180 18 360 38 Q540 58 720 33 Q900 8 1080 33 Q1260 58 1440 38" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" />
-          {/* near wave - overlaps mid */}
-          <path d="M0 65 Q200 50 400 68 Q600 86 800 62 Q1000 38 1200 65 Q1350 85 1440 70 L1440 200 L0 200 Z" fill="url(#ocean3)" />
+          <path d="M0 48 C140 24, 260 56, 400 40 C500 30, 580 62, 700 34 C820 10, 940 54, 1060 44 C1140 38, 1300 60, 1440 30" stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          {/* near wave */}
+          <path d="M0 68 C80 52, 200 86, 340 58 C440 40, 560 82, 680 72 C780 64, 880 90, 1020 54 C1120 30, 1280 78, 1440 66 L1440 200 L0 200 Z" fill="url(#ocean3)" />
           {/* near foam */}
-          <path d="M0 68 Q200 53 400 71 Q600 89 800 65 Q1000 41 1200 68 Q1350 88 1440 73" stroke="white" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+          <path d="M0 70 C80 54, 200 88, 340 60 C440 42, 560 84, 680 74 C780 66, 880 92, 1020 56 C1120 32, 1280 80, 1440 68" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" />
           {/* foam bubbles */}
-          <circle cx="350" cy="76" r="2.5" fill="white" />
-          <circle cx="380" cy="80" r="1.5" fill="white" />
-          <circle cx="750" cy="70" r="2" fill="white" />
-          <circle cx="1180" cy="75" r="2.5" fill="white" />
-          {/* wet sand - overlaps ocean */}
-          <path d="M0 95 Q360 85 720 97 Q1080 109 1440 92 L1440 200 L0 200 Z" fill="url(#wet-sand)" />
-          {/* dry sand - overlaps wet sand */}
-          <path d="M0 115 Q360 108 720 117 Q1080 126 1440 112 L1440 200 L0 200 Z" fill="url(#sand)" />
+          <circle cx="310" cy="56" r="2" fill="white" />
+          <circle cx="350" cy="50" r="1.5" fill="white" />
+          <circle cx="650" cy="70" r="1.5" fill="white" />
+          <circle cx="920" cy="58" r="2" fill="white" />
+          <circle cx="1250" cy="74" r="1.5" fill="white" />
+          {/* wet sand */}
+          <path d="M0 94 C180 82, 350 102, 520 88 C680 76, 820 98, 1000 92 C1120 88, 1300 104, 1440 86 L1440 200 L0 200 Z" fill="url(#wet-sand)" />
+          {/* dry sand */}
+          <path d="M0 112 C200 102, 380 118, 560 108 C720 100, 900 116, 1080 112 C1200 108, 1360 120, 1440 106 L1440 200 L0 200 Z" fill="url(#sand)" />
 
           {/* sand texture */}
           <g fill="#C4A038">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { authClient } from "~/server/better-auth/client";
 import { api } from "~/trpc/react";
 
 interface Conversation {
@@ -22,7 +23,13 @@ export function BrowseHome({
   });
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
+    <main className="relative flex min-h-screen flex-col items-center justify-center gap-8 p-8">
+      <button
+        onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => router.push("/") } })}
+        className="absolute right-8 top-8 text-sm text-muted-foreground underline"
+      >
+        Sign Out
+      </button>
       <h1 className="text-4xl font-bold">SimpleSurf</h1>
       <p className="max-w-md text-center text-xl text-muted-foreground">
         Your friendly browsing assistant. Start a new conversation to browse the

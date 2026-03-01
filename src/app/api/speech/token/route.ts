@@ -17,6 +17,8 @@ export async function POST() {
   );
 
   if (!res.ok) {
+    const errorBody = await res.text().catch(() => "");
+    console.error(`[speech/token] ElevenLabs returned ${res.status}: ${errorBody}`);
     return new Response("Failed to get token", { status: 502 });
   }
 

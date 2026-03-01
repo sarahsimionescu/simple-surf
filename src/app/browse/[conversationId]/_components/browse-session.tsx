@@ -845,7 +845,7 @@ export function BrowseSession({
               placeholder="What would you like to do?"
               rows={1}
               className="max-h-32 flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-relaxed text-[#141414] placeholder:text-[#9A9A97] focus:outline-none"
-              disabled={isLoading && !activeScreen}
+              disabled={isLoading && !activeScreen && !findPendingRenderScreen()}
             />
             <button
               type="button"
@@ -886,7 +886,7 @@ export function BrowseSession({
             </button>
             <button
               type="submit"
-              disabled={(isLoading && !activeScreen) || !input.trim()}
+              disabled={(isLoading && !activeScreen && !findPendingRenderScreen()) || !input.trim()}
               className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-[#141414] text-white transition-all duration-200 hover:bg-[#0077B6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6] disabled:opacity-30"
               aria-label="Send message"
             >

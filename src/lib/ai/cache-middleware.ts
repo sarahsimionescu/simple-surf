@@ -7,22 +7,38 @@ const redis = new Redis({
   token: env.KV_REST_API_TOKEN,
 });
 
+interface CachedGenerateResult {
+  response?: {
+    timestamp?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+interface CachedStreamPart {
+  type: string;
+  timestamp?: string;
+  [key: string]: unknown;
+}
+
 export const cacheMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   wrapGenerate: async ({ doGenerate, params }) => {
     const cacheKey = JSON.stringify(params);
-    const cached = await redis.get(cacheKey);
+    const cached = await redis.get<CachedGenerateResult>(cacheKey);
 
     if (cached !== null) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return {
-        ...(cached as any),
+        ...cached,
         response: {
-          ...(cached as any).response,
-          timestamp: (cached as any)?.response?.timestamp
-            ? new Date((cached as any).response.timestamp as string)
+          ...cached.response,
+          timestamp: cached.response?.timestamp
+            ? new Date(cached.response.timestamp)
             : undefined,
         },
-      };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any;
     }
 
     const result = await doGenerate();
@@ -32,26 +48,22 @@ export const cacheMiddleware: LanguageModelMiddleware = {
 
   wrapStream: async ({ doStream, params }) => {
     const cacheKey = JSON.stringify(params);
-    const cached = await redis.get(cacheKey);
+    const cached = await redis.get<CachedStreamPart[]>(cacheKey);
 
     if (cached !== null) {
-      const formattedChunks = (cached as any[]).map(
-        (p: { type: string; timestamp?: string }) => {
-          if (
-            p.type === "response-metadata" &&
-            "timestamp" in p &&
-            p.timestamp
-          ) {
-            return { ...p, timestamp: new Date(p.timestamp) };
-          }
-          return p;
-        },
-      );
+      const formattedChunks = cached.map((p) => {
+        if (p.type === "response-metadata" && p.timestamp) {
+          return { ...p, timestamp: new Date(p.timestamp) };
+        }
+        return p;
+      });
       return {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         stream: simulateReadableStream({
           initialDelayInMs: 0,
           chunkDelayInMs: 10,
-          chunks: formattedChunks,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          chunks: formattedChunks as any[],
         }),
       };
     }
@@ -70,7 +82,7 @@ export const cacheMiddleware: LanguageModelMiddleware = {
     });
 
     return {
-      stream: stream.pipeThrough(transformStream),
+      stream: stream.pipeThrough(transformStream) as typeof stream,
       ...rest,
     };
   },

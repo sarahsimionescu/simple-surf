@@ -21,10 +21,11 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const {
-    messages,
-    conversationId,
-  }: { messages: UIMessage[]; conversationId: string } = await req.json();
+  const body = (await req.json()) as {
+    messages: UIMessage[];
+    conversationId: string;
+  };
+  const { messages, conversationId } = body;
 
   // Get conversation and verify ownership
   const conversation = await db.conversation.findFirst({

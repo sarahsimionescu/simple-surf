@@ -26,7 +26,7 @@ export function LandingSteps() {
         <div className="mb-20 text-center">
           <h2
             id="steps-heading"
-            className="font-[family-name:var(--font-syne)] text-sm font-bold lowercase tracking-[0.15em] text-[#4A4A48]"
+            className="font-[family-name:var(--font-syne)] text-base font-bold lowercase tracking-[0.15em] text-[#4A4A48] md:text-lg"
           >
             How it works
           </h2>
@@ -36,7 +36,7 @@ export function LandingSteps() {
             <div key={i} className="group">
               <span
                 aria-hidden="true"
-                className="font-[family-name:var(--font-syne)] text-sm font-bold tracking-widest text-[#0077B6]"
+                className="font-[family-name:var(--font-syne)] text-base font-bold tracking-widest text-[#0077B6]"
               >
                 {String(i + 1).padStart(2, "0")}
               </span>
@@ -47,7 +47,7 @@ export function LandingSteps() {
               <h3 className="font-[family-name:var(--font-syne)] text-2xl font-bold lowercase leading-tight md:text-3xl">
                 {step.title}
               </h3>
-              <p className="mt-4 text-base leading-relaxed text-[#4A4A48]">
+              <p className="mt-4 text-lg leading-relaxed text-[#4A4A48]">
                 {step.description}
               </p>
             </div>

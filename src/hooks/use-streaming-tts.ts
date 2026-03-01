@@ -35,7 +35,7 @@ export function useStreamingTTS(): StreamingTTSControls {
     return audioCtxRef.current;
   };
 
-  const playAudioChunk = async (base64Audio: string) => {
+  const playAudioChunk = useCallback(async (base64Audio: string) => {
     try {
       const ctx = getAudioContext();
       if (ctx.state === "suspended") await ctx.resume();
@@ -46,7 +46,7 @@ export function useStreamingTTS(): StreamingTTSControls {
         bytes[i] = binary.charCodeAt(i);
       }
 
-      const audioBuffer = await ctx.decodeAudioData(bytes.buffer as ArrayBuffer);
+      const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(ctx.destination);
@@ -58,7 +58,7 @@ export function useStreamingTTS(): StreamingTTSControls {
     } catch (err) {
       clog("AUDIO", "Failed to play chunk:", err);
     }
-  };
+  }, []);
 
   const start = useCallback(async () => {
     clog("START", "Initiating streaming TTS");
@@ -131,11 +131,11 @@ export function useStreamingTTS(): StreamingTTSControls {
       clog("WS", `Closed (code=${event.code} reason="${event.reason}")`);
       activeRef.current = false;
     };
-  }, []);
+  }, [playAudioChunk]);
 
   const sendText = useCallback((fullText: string) => {
     const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (ws?.readyState !== WebSocket.OPEN) return;
 
     // Only send the new portion of text
     const newText = fullText.slice(sentLengthRef.current);
@@ -154,7 +154,7 @@ export function useStreamingTTS(): StreamingTTSControls {
   const finish = useCallback(() => {
     clog("FINISH", `Flushing remaining audio (sent ${sentLengthRef.current} chars total)`);
     const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (ws?.readyState !== WebSocket.OPEN) return;
 
     // Send flush to generate audio for any remaining buffered text
     ws.send(JSON.stringify({ text: "", flush: true }));

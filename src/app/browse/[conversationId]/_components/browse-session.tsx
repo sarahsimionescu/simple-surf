@@ -308,7 +308,7 @@ export function BrowseSession({
         }
       }
     }
-  }, [status, streamingTTS]);
+  }, [status, streamingTTS, messages]);
 
   // Pipe text deltas to the streaming TTS as they arrive
   useEffect(() => {

@@ -10,5 +10,5 @@ export default async function NewBrowsePage() {
   if (conversations.length > 0) redirect("/browse");
 
   const conversation = await api.conversation.create({});
-  redirect(`/browse/${conversation.id}`);
+  redirect(`/browse/${conversation.id}?new=1`);
 }

@@ -1,5 +1,6 @@
 import { SignInButton } from "~/app/_components/sign-in-button";
 import { ArrowIcon } from "~/app/_components/arrow-icon";
+import { BounceDot } from "~/app/_components/bounce-dot";
 
 export function LandingHero() {
   return (
@@ -10,14 +11,13 @@ export function LandingHero() {
       <div className="max-w-5xl text-center">
         <h1
           id="hero-heading"
-          className="landing-reveal font-[family-name:var(--font-syne)] text-[clamp(2.25rem,7.5vw,7.5rem)] font-extrabold lowercase leading-[0.95] tracking-[-0.02em]"
+          className="landing-reveal font-[family-name:var(--font-syne)] text-[clamp(2.25rem,8vw,7rem)] font-extrabold lowercase leading-[0.95] tracking-[-0.02em]"
         >
-          the internet,{" "}
-          <br className="md:hidden" />
-          <span className="landing-dot-hover md:whitespace-nowrap">
+          the internet,
+          <br />
+          <BounceDot>
             <span className="text-[#0077B6]">made easy</span>
-            <span className="landing-dot-bounce text-[#0077B6]/40">.</span>
-          </span>
+          </BounceDot>
         </h1>
         <p className="landing-reveal landing-reveal-delay-1 mx-auto mt-8 max-w-lg text-xl leading-relaxed text-[#4A4A48] md:text-2xl">
           SimpleSurf browses the web for you. Just describe what

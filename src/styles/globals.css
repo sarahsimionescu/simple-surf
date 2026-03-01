@@ -156,29 +156,6 @@
   animation-delay: 0.5s;
 }
 
-/* playful period bounce */
-@keyframes landing-bounce {
-  0%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-0.15em); }
-  50% { transform: translateY(0); }
-  70% { transform: translateY(-0.08em); }
-}
-
-@keyframes landing-bounce-hover {
-  0%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-0.15em); }
-  50% { transform: translateY(0); }
-  70% { transform: translateY(-0.08em); }
-}
-
-.landing-dot-bounce {
-  display: inline-block;
-  animation: landing-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1.5s both;
-}
-
-.landing-dot-hover:hover .landing-dot-bounce {
-  animation: landing-bounce-hover 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
 
 /* button shine sweep on hover */
 .btn-shine {
@@ -207,15 +184,30 @@
   transform: translateX(200%);
 }
 
+/* marquee scroll */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.marquee {
+  animation: marquee-scroll 40s linear infinite;
+}
+
+.marquee-reverse {
+  animation: marquee-scroll 40s linear infinite reverse;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-reveal {
     animation: none;
     opacity: 1;
   }
-  .landing-dot-bounce {
-    animation: none;
-  }
   .btn-shine::after {
     display: none;
+  }
+  .marquee,
+  .marquee-reverse {
+    animation: none;
   }
 }

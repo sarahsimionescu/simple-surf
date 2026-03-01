@@ -3,6 +3,7 @@ import { getSession } from "~/server/better-auth/server";
 import { GrainOverlay } from "~/app/_components/grain-overlay";
 import { LandingNav } from "~/app/_components/landing-nav";
 import { LandingHero } from "~/app/_components/landing-hero";
+import { LandingMarquee } from "~/app/_components/landing-marquee";
 import { LandingSteps } from "~/app/_components/landing-steps";
 import { LandingCta } from "~/app/_components/landing-cta";
 
@@ -40,6 +41,8 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        <LandingMarquee />
 
         <LandingSteps />
 

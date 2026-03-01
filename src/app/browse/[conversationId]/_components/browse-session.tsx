@@ -166,8 +166,13 @@ export function BrowseSession({
 }) {
   const [input, setInput] = useState("");
   const [activeScreen, setActiveScreen] = useState<ActiveScreen | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const submittedToolCalls = useRef<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const sentViaMicRef = useRef(false);
 
   // Log mount
   useEffect(() => {
@@ -343,6 +348,64 @@ export function BrowseSession({
       output: value,
     });
     setActiveScreen(null);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks to release mic
+        stream.getTracks().forEach((t) => t.stop());
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        audioChunksRef.current = [];
+
+        // Convert to base64
+        const buffer = await audioBlob.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(buffer).reduce((s, b) => s + String.fromCharCode(b), ""),
+        );
+
+        // Transcribe
+        setIsTranscribing(true);
+        try {
+          const res = await fetch("/api/speech", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "transcribe", audio: base64 }),
+          });
+          const data = (await res.json()) as { text?: string; error?: string };
+          if (data.text?.trim()) {
+            sentViaMicRef.current = true;
+            void sendMessage({ text: data.text });
+          }
+        } catch (err) {
+          clog("VOICE", "Transcription failed:", err);
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      clog("VOICE", "Mic access denied:", err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current?.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
   };
 
   return (
@@ -624,6 +687,43 @@ export function BrowseSession({
               className="max-h-32 flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-relaxed text-[#141414] placeholder:text-[#9A9A97] focus:outline-none"
               disabled={isLoading && !activeScreen}
             />
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                void startRecording();
+              }}
+              onPointerUp={stopRecording}
+              onPointerLeave={stopRecording}
+              disabled={isLoading || isTranscribing}
+              className={`flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6] disabled:opacity-30 ${
+                isRecording
+                  ? "bg-red-500 text-white"
+                  : "bg-[#141414]/[0.06] text-[#4A4A48] hover:bg-[#141414]/10"
+              }`}
+              aria-label={isRecording ? "Recording..." : isTranscribing ? "Transcribing..." : "Hold to talk"}
+              title={isRecording ? "Release to send" : "Hold to talk"}
+            >
+              {isTranscribing ? (
+                <PulsingDots />
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M12 1a4 4 0 0 0-4 4v7a4 4 0 0 0 8 0V5a4 4 0 0 0-4-4Z"
+                    fill={isRecording ? "currentColor" : "none"}
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M19 10v2a7 7 0 0 1-14 0v-2"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              )}
+            </button>
             <button
               type="submit"
               disabled={(isLoading && !activeScreen) || !input.trim()}

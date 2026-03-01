@@ -3,7 +3,6 @@ import {
   experimental_transcribe as transcribe,
 } from "ai";
 import { elevenlabs } from "@ai-sdk/elevenlabs";
-import { env } from "~/env";
 import { auth } from "~/server/better-auth";
 import { headers } from "next/headers";
 

@@ -276,7 +276,6 @@ export function BrowseSession({
     prevStatusForTTS.current = status;
 
     if (wasStreaming && nowReady && sentViaMicRef.current) {
-      sentViaMicRef.current = false;
       // Get the last assistant text
       const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
       if (lastAssistant) {
@@ -285,6 +284,7 @@ export function BrowseSession({
           .map((p) => p.text)
           .join(" ");
         if (textParts.trim()) {
+          sentViaMicRef.current = false;
           void playTTS(textParts);
         }
       }
@@ -405,7 +405,11 @@ export function BrowseSession({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "transcribe", audio: base64 }),
           });
-          const data = (await res.json()) as { text?: string; error?: string };
+          if (!res.ok) {
+            clog("VOICE", `Transcription error (${res.status})`);
+            return;
+          }
+          const data = (await res.json()) as { text?: string };
           if (data.text?.trim()) {
             sentViaMicRef.current = true;
             void sendMessage({ text: data.text });
@@ -438,7 +442,11 @@ export function BrowseSession({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "speak", text }),
       });
-      const data = (await res.json()) as { audio?: string; mediaType?: string; error?: string };
+      if (!res.ok) {
+        clog("TTS", `Speech error (${res.status})`);
+        return;
+      }
+      const data = (await res.json()) as { audio?: string; mediaType?: string };
       if (data.audio && data.mediaType) {
         const audio = new Audio(`data:${data.mediaType};base64,${data.audio}`);
         await audio.play();

@@ -268,6 +268,29 @@ export function BrowseSession({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
+  // Auto-play TTS when AI finishes responding to a voice message
+  const prevStatusForTTS = useRef(status);
+  useEffect(() => {
+    const wasStreaming = prevStatusForTTS.current === "streaming" || prevStatusForTTS.current === "submitted";
+    const nowReady = status === "ready";
+    prevStatusForTTS.current = status;
+
+    if (wasStreaming && nowReady && sentViaMicRef.current) {
+      sentViaMicRef.current = false;
+      // Get the last assistant text
+      const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+      if (lastAssistant) {
+        const textParts = lastAssistant.parts
+          .filter((p): p is { type: "text"; text: string } => p.type === "text")
+          .map((p) => p.text)
+          .join(" ");
+        if (textParts.trim()) {
+          void playTTS(textParts);
+        }
+      }
+    }
+  }, [status, messages]);
+
   // scan messages for active renderScreen tool calls
   useEffect(() => {
     clog(
@@ -408,6 +431,23 @@ export function BrowseSession({
     setIsRecording(false);
   };
 
+  const playTTS = async (text: string) => {
+    try {
+      const res = await fetch("/api/speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "speak", text }),
+      });
+      const data = (await res.json()) as { audio?: string; mediaType?: string; error?: string };
+      if (data.audio && data.mediaType) {
+        const audio = new Audio(`data:${data.mediaType};base64,${data.audio}`);
+        await audio.play();
+      }
+    } catch (err) {
+      clog("TTS", "Playback failed:", err);
+    }
+  };
+
   return (
     <div
       className="flex h-screen bg-[#F7F7F5] text-[#141414]"
@@ -520,7 +560,7 @@ export function BrowseSession({
                     return (
                       <div
                         key={`${message.id}-${i}`}
-                        className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                        className={`group flex ${isUser ? "justify-end" : "justify-start"}`}
                       >
                         <div
                           className={`max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${
@@ -531,6 +571,21 @@ export function BrowseSession({
                         >
                           <FormattedText text={part.text} />
                         </div>
+                        {!isUser && part.text.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => void playTTS(part.text)}
+                            className="ml-1 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center self-end rounded text-[#9A9A97] opacity-0 transition-opacity hover:text-[#4A4A48] group-hover:opacity-100"
+                            aria-label="Read aloud"
+                            title="Read aloud"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M11 5L6 9H2v6h4l5 4V5Z" fill="currentColor" />
+                              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     );
                   }

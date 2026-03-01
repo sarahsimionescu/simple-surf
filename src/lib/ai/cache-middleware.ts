@@ -8,6 +8,7 @@ const redis = new Redis({
 });
 
 export const cacheMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
   wrapGenerate: async ({ doGenerate, params }) => {
     const cacheKey = JSON.stringify(params);
     const cached = await redis.get(cacheKey);

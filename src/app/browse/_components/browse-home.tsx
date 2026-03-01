@@ -67,7 +67,7 @@ export function BrowseHome({
         <button
           onClick={() => createConversation.mutate({})}
           disabled={isStarting}
-          className="group mt-8 cursor-pointer rounded-full bg-[#141414] px-10 py-5 text-lg font-semibold text-[#F7F7F5] transition-all duration-300 hover:bg-[#0077B6] hover:shadow-[0_0_40px_rgba(0,119,182,0.3)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
+          className="btn-shine group mt-8 cursor-pointer rounded-full bg-[#141414] px-10 py-5 text-lg font-semibold text-[#F7F7F5] transition-all duration-300 hover:bg-[#0077B6] hover:shadow-[0_0_40px_rgba(0,119,182,0.3)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
         >
           <span className="flex items-center gap-3">
             {isStarting ? "Starting..." : "New conversation"}

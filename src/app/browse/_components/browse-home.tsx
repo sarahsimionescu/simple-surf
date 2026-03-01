@@ -83,14 +83,11 @@ export function BrowseHome({
                   className="group flex cursor-pointer items-center justify-between rounded-xl border border-[#141414]/[0.06] bg-white px-5 py-4 text-left transition-all duration-200 hover:border-[#0077B6]/30 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
                 >
                   <div className="min-w-0 flex-1">
-                    <span className="block text-base font-medium text-[#141414]">
-                      {c.title ?? "Untitled"}
+                    <span className="block truncate text-base font-medium text-[#141414]">
+                      {c.lastVisitedUrl
+                        ? c.lastVisitedUrl.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]
+                        : c.title ?? "Untitled"}
                     </span>
-                    {c.lastVisitedUrl && (
-                      <span className="mt-0.5 block truncate text-sm text-[#9A9A97]">
-                        {c.lastVisitedUrl.replace(/^https?:\/\/(www\.)?/, "")}
-                      </span>
-                    )}
                   </div>
                   <svg
                     width="14"

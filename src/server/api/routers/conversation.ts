@@ -16,7 +16,7 @@ export const conversationRouter = createTRPCRouter({
       const conversation = await ctx.db.conversation.create({
         data: {
           userId: ctx.session.user.id,
-          title: input?.title ?? "New Conversation",
+          title: input?.title ?? null,
           browserSessionId: browserSession.id,
           browserLiveUrl: browserSession.liveUrl,
         },

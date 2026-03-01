@@ -38,6 +38,24 @@ export async function POST(req: Request) {
     return new Response("No browser session", { status: 400 });
   }
 
+  // auto-title from first user message if untitled
+  if (!conversation.title) {
+    const firstUserMessage = messages.find((m) => m.role === "user");
+    if (firstUserMessage) {
+      const text = firstUserMessage.parts
+        .filter((p): p is { type: "text"; text: string } => p.type === "text")
+        .map((p) => p.text)
+        .join(" ")
+        .slice(0, 100);
+      if (text) {
+        await db.conversation.update({
+          where: { id: conversationId },
+          data: { title: text },
+        });
+      }
+    }
+  }
+
   // Model stack: gateway → supermemory → cache middleware
   const gatewayProvider = createGateway({
     apiKey: env.AI_GATEWAY_API_KEY,

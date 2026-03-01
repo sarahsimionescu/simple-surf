@@ -19,7 +19,7 @@ export function LandingCta() {
         Free to use. Nothing to install. Works right in your browser.
       </p>
       <div className="mt-10 flex flex-col items-center gap-3">
-        <SignInButton className="group cursor-pointer rounded-full bg-[#141414] px-12 py-5 text-lg font-semibold text-[#F7F7F5] transition-all duration-500 hover:bg-[#0077B6] hover:shadow-[0_0_40px_rgba(0,119,182,0.3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]">
+        <SignInButton className="btn-shine group cursor-pointer rounded-full bg-[#141414] px-12 py-5 text-lg font-semibold text-[#F7F7F5] transition-all duration-500 hover:bg-[#0077B6] hover:shadow-[0_0_40px_rgba(0,119,182,0.3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]">
           <span className="flex items-center gap-3">
             Sign in with Google to start
             <ArrowIcon />

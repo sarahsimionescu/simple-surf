@@ -126,11 +126,11 @@ export function BrowseSession({
       style={{ colorScheme: "light" }}
     >
       {/* browser iframe + render screen overlay */}
-      <div className="relative flex-[3]">
+      <div className="relative min-w-0 flex-1">
         {browserLiveUrl && (
           <iframe
             src={browserLiveUrl}
-            className="h-full w-full border-0"
+            className="absolute inset-0 h-full w-full border-0"
             title="Browser View"
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
           />

@@ -164,13 +164,20 @@
   70% { transform: translateY(-0.08em); }
 }
 
+@keyframes landing-bounce-hover {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-0.15em); }
+  50% { transform: translateY(0); }
+  70% { transform: translateY(-0.08em); }
+}
+
 .landing-dot-bounce {
   display: inline-block;
   animation: landing-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1.5s both;
 }
 
 .landing-dot-hover:hover .landing-dot-bounce {
-  animation: landing-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: landing-bounce-hover 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* button shine sweep on hover */

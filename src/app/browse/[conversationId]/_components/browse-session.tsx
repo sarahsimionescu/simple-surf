@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from "ai";
 import { RenderScreen } from "~/app/_components/render-screen";
 
 interface ActiveScreen {
@@ -27,6 +30,7 @@ export function BrowseSession({
       api: "/api/chat",
       body: { conversationId },
     }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });
 
   const isLoading = status === "streaming" || status === "submitted";

@@ -2,15 +2,24 @@ import { BrowserUse } from "browser-use-sdk";
 
 const client = new BrowserUse();
 
-export async function createBrowserSession() {
+export async function createBrowserSession(startUrl?: string) {
   const session = await client.sessions.create({
-    startUrl: "https://www.google.com",
+    startUrl: startUrl ?? "https://www.google.com",
     keepAlive: true,
     persistMemory: true,
     browserScreenWidth: 1280,
     browserScreenHeight: 1024,
   });
   return { id: session.id, liveUrl: session.liveUrl, status: session.status };
+}
+
+export async function isBrowserSessionAlive(sessionId: string): Promise<boolean> {
+  try {
+    const session = await client.sessions.get(sessionId);
+    return session.status === "active";
+  } catch {
+    return false;
+  }
 }
 
 export async function runBrowserTask(sessionId: string, task: string) {

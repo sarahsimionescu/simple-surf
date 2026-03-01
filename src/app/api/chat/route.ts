@@ -13,6 +13,7 @@ import { env } from "~/env";
 import { db } from "~/server/db";
 import { auth } from "~/server/better-auth";
 import { headers } from "next/headers";
+import { isBrowserSessionAlive, createBrowserSession } from "~/server/services/browser-use";
 
 export async function POST(req: Request) {
   // Authenticate
@@ -24,9 +25,24 @@ export async function POST(req: Request) {
   const body = (await req.json()) as {
     messages: UIMessage[];
     conversationId: string;
-    location?: { lat?: number; lng?: number; name?: string };
   };
-  const { messages, conversationId, location } = body;
+  const { messages, conversationId } = body;
+
+  // read location from cookie
+  const cookieHeader = (await headers()).get("cookie") ?? "";
+  const locationCookie = cookieHeader.match(/user_location=([^;]+)/)?.[1];
+  const location = (() => {
+    if (!locationCookie) return null;
+    const [latStr, lngStr, ...nameParts] = locationCookie.split(",");
+    const lat = latStr ? parseFloat(latStr) : NaN;
+    const lng = lngStr ? parseFloat(lngStr) : NaN;
+    const name = nameParts.join(",") || null;
+    return {
+      lat: isNaN(lat) ? null : lat,
+      lng: isNaN(lng) ? null : lng,
+      name,
+    };
+  })();
 
   // Get conversation and verify ownership
   const conversation = await db.conversation.findFirst({
@@ -37,6 +53,21 @@ export async function POST(req: Request) {
   }
   if (!conversation.browserSessionId) {
     return new Response("No browser session", { status: 400 });
+  }
+
+  // re-create browser session if it expired
+  let browserSessionId = conversation.browserSessionId;
+  const alive = await isBrowserSessionAlive(browserSessionId);
+  if (!alive) {
+    const newSession = await createBrowserSession(conversation.lastVisitedUrl ?? undefined);
+    browserSessionId = newSession.id;
+    await db.conversation.update({
+      where: { id: conversationId },
+      data: {
+        browserSessionId: newSession.id,
+        browserLiveUrl: newSession.liveUrl,
+      },
+    });
   }
 
   // auto-title from first user message if untitled
@@ -79,7 +110,7 @@ Your job is to help users browse the web. You have three tools:
 - "webSearch": Use this first for quick factual lookups or finding the right page to visit. After getting results, use "browse" to navigate to the most relevant URL so the user can see it.
 - "browse": Use this to perform actions in the browser (navigate, click, search, fill forms, etc.)
 - "renderScreen": Use this to ask the user for input when you need choices or information from them.
-${location ? `\nUser location:${location.lat && location.lng ? ` ${location.lat}, ${location.lng}` : ""}${location.name ? ` (${location.name})` : ""}. When the user asks for nearby places, directions, or anything location-based, use these exact coordinates or city name in your searches and map queries. Do NOT search for "near me" since the browser doesn't have location access. Instead search for things like "mosques near ${location.lat}, ${location.lng}" or "mosques in ${location.name ?? "their city"}".\n` : ""}
+${location ? `\nLOCATION: ${location.lat && location.lng ? `${location.lat}, ${location.lng}` : ""}${location.name ? ` (${location.name})` : ""}. Use these coordinates for all location queries. Never search "near me" - the browser has no location access. Instead search near these coordinates or city name.\n` : ""}
 Guidelines:
 - Use simple, clear language. Avoid jargon.
 - Be patient and reassuring.
@@ -90,11 +121,27 @@ Guidelines:
     messages: await convertToModelMessages(messages),
     stopWhen: stepCountIs(10),
     tools: {
-      browse: createBrowseTool(conversation.browserSessionId, conversationId),
+      browse: createBrowseTool(browserSessionId, conversationId),
       webSearch: webSearchTool,
       renderScreen: renderScreenTool,
     },
   });
 
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    originalMessages: messages,
+    onFinish: async ({ messages: updatedMessages }) => {
+      // persist all messages to db
+      await db.message.deleteMany({ where: { conversationId } });
+      if (updatedMessages.length > 0) {
+        await db.message.createMany({
+          data: updatedMessages.map((m) => ({
+            id: m.id,
+            conversationId,
+            role: m.role,
+            content: JSON.stringify(m),
+          })),
+        });
+      }
+    },
+  });
 }

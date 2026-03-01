@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { type UIMessage } from "ai";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
   createBrowserSession,
   stopBrowserSession,
+  isBrowserSessionAlive,
 } from "~/server/services/browser-use";
 
 export const conversationRouter = createTRPCRouter({
@@ -30,9 +32,36 @@ export const conversationRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const conversation = await ctx.db.conversation.findFirst({
         where: { id: input.id, userId: ctx.session.user.id },
+        include: { messages: { orderBy: { createdAt: "asc" } } },
       });
       if (!conversation) throw new Error("Conversation not found");
-      return conversation;
+
+      // re-create browser session if expired
+      let { browserSessionId, browserLiveUrl } = conversation;
+      if (browserSessionId) {
+        const alive = await isBrowserSessionAlive(browserSessionId);
+        if (!alive) {
+          const newSession = await createBrowserSession(conversation.lastVisitedUrl ?? undefined);
+          browserSessionId = newSession.id;
+          browserLiveUrl = newSession.liveUrl ?? null;
+          await ctx.db.conversation.update({
+            where: { id: input.id },
+            data: { browserSessionId, browserLiveUrl },
+          });
+        }
+      }
+
+      // parse stored messages back to UIMessage format
+      const uiMessages = conversation.messages.map(
+        (m) => JSON.parse(m.content) as UIMessage,
+      );
+
+      return {
+        ...conversation,
+        browserSessionId,
+        browserLiveUrl,
+        uiMessages,
+      };
     }),
 
   list: protectedProcedure.query(async ({ ctx }) => {

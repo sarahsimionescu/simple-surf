@@ -18,6 +18,7 @@ export default async function ConversationPage({
     <BrowseSession
       conversationId={conversation.id}
       browserLiveUrl={conversation.browserLiveUrl}
+      initialMessages={conversation.uiMessages}
     />
   );
 }

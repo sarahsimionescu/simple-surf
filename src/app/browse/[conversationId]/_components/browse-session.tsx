@@ -143,9 +143,11 @@ function FormattedText({ text }: { text: string }) {
 export function BrowseSession({
   conversationId,
   browserLiveUrl,
+  initialMessages = [],
 }: {
   conversationId: string;
   browserLiveUrl: string | null;
+  initialMessages?: import("ai").UIMessage[];
 }) {
   const [input, setInput] = useState("");
   const [activeScreen, setActiveScreen] = useState<ActiveScreen | null>(null);
@@ -167,6 +169,7 @@ export function BrowseSession({
   }, []);
 
   const { messages, sendMessage, addToolOutput, status } = useChat({
+    messages: initialMessages,
     transport: new DefaultChatTransport({
       api: "/api/chat",
       body: { conversationId },

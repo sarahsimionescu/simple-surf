@@ -61,7 +61,7 @@ export function RenderScreen({ type, prompt, options, onSubmit }: RenderScreenPr
   if (type === "select-one") {
     return (
       <div className="flex flex-col items-center gap-6 rounded-2xl bg-white p-8 shadow-[0_4px_60px_rgba(0,0,0,0.06)]">
-        <h2 className="text-center font-[family-name:var(--font-syne)] text-xl font-bold text-[#141414]">
+        <h2 className="text-center text-xl font-bold text-[#141414]">
           {prompt}
         </h2>
         <div className="flex w-full max-w-lg flex-col gap-3">
@@ -78,7 +78,7 @@ export function RenderScreen({ type, prompt, options, onSubmit }: RenderScreenPr
   if (type === "select-multi") {
     return (
       <div className="flex flex-col items-center gap-6 rounded-2xl bg-white p-8 shadow-[0_4px_60px_rgba(0,0,0,0.06)]">
-        <h2 className="text-center font-[family-name:var(--font-syne)] text-xl font-bold text-[#141414]">
+        <h2 className="text-center text-xl font-bold text-[#141414]">
           {prompt}
         </h2>
         <div className="flex w-full max-w-lg flex-col gap-3">
@@ -119,7 +119,7 @@ export function RenderScreen({ type, prompt, options, onSubmit }: RenderScreenPr
   if (type === "text") {
     return (
       <div className="flex flex-col items-center gap-6 rounded-2xl bg-white p-8 shadow-[0_4px_60px_rgba(0,0,0,0.06)]">
-        <h2 className="text-center font-[family-name:var(--font-syne)] text-xl font-bold text-[#141414]">
+        <h2 className="text-center text-xl font-bold text-[#141414]">
           {prompt}
         </h2>
         <textarea
@@ -142,7 +142,7 @@ export function RenderScreen({ type, prompt, options, onSubmit }: RenderScreenPr
   if (type === "auth") {
     return (
       <div className="flex flex-col items-center gap-6 rounded-2xl bg-white p-8 shadow-[0_4px_60px_rgba(0,0,0,0.06)]">
-        <h2 className="text-center font-[family-name:var(--font-syne)] text-xl font-bold text-[#141414]">
+        <h2 className="text-center text-xl font-bold text-[#141414]">
           {prompt}
         </h2>
         <p className="max-w-md text-center text-base leading-relaxed text-[#4A4A48]">

@@ -4,72 +4,69 @@
 
 **Goal:** Build an AI browsing assistant for elderly users with a chat/voice interface alongside a live browser view.
 
-**Architecture:** Single Next.js codebase (T3 stack). Browser Use Cloud API for browser automation. Claude for reasoning. Deepgram for STT. ElevenLabs for TTS. WebSocket via next-ws for real-time communication. Side-by-side layout with chat panel and browser iframe.
+**Architecture:** Single Next.js codebase (T3 stack). Vercel AI SDK with `useChat` for chat streaming. Claude as the reasoning layer with a custom `browse` tool that triggers Browser Use Cloud. When Claude calls the `browse` tool, the frontend listens via message parts and renders the live session iframe. Upstash Redis for session/state caching. Deepgram for STT, ElevenLabs for TTS.
 
-**Tech Stack:** Next.js 15, TypeScript, Tailwind CSS v4, tRPC, Prisma/PostgreSQL, Better Auth, next-ws, browser-use-sdk, @anthropic-ai/sdk, @deepgram/sdk, @elevenlabs/elevenlabs-js
+**Tech Stack:** Next.js 15, TypeScript, Tailwind CSS v4, tRPC, Prisma/PostgreSQL, Better Auth, `ai` + `@ai-sdk/anthropic` + `@ai-sdk/react`, `@upstash/redis`, `@deepgram/sdk`, `@elevenlabs/elevenlabs-js`
 
 ---
 
-### Task 1: Install dependencies
+### Task 1: Install dependencies and configure environment
 
 **Files:**
 - Modify: `package.json`
 - Modify: `src/env.js`
 - Modify: `.env.example`
 
-**Step 1: Install runtime dependencies**
+**Step 1: Install Vercel AI SDK and Anthropic provider**
 
 Run:
 ```bash
-pnpm add next-ws ws @anthropic-ai/sdk browser-use-sdk @deepgram/sdk @elevenlabs/elevenlabs-js
+pnpm add ai @ai-sdk/anthropic @ai-sdk/react
 ```
 
-**Step 2: Install dev dependencies**
+**Step 2: Install Upstash Redis**
 
 Run:
 ```bash
-pnpm add -D @types/ws
+pnpm add @upstash/redis
 ```
 
-**Step 3: Add next-ws prepare script to package.json**
-
-In `package.json`, add to `"scripts"`:
-```json
-"prepare": "next-ws patch"
-```
-
-**Step 4: Run prepare to patch Next.js**
+**Step 3: Install remaining service SDKs**
 
 Run:
 ```bash
-pnpm run prepare
+pnpm add @deepgram/sdk @elevenlabs/elevenlabs-js
 ```
 
-**Step 5: Update `.env.example` with new env vars**
+**Step 4: Update `.env.example` with new env vars**
 
 Add to `.env.example`:
 ```
-# Anthropic
+# Anthropic (used by Vercel AI SDK)
 ANTHROPIC_API_KEY=""
 
 # Browser Use Cloud
 BROWSER_USE_API_KEY=""
 
+# Upstash Redis
+UPSTASH_REDIS_REST_URL=""
+UPSTASH_REDIS_REST_TOKEN=""
+
 # Deepgram
-DEEPGRAM_API_KEY=""
 NEXT_PUBLIC_DEEPGRAM_API_KEY=""
 
 # ElevenLabs
 ELEVENLABS_API_KEY=""
 ```
 
-**Step 6: Update `src/env.js` with new env var schemas**
+**Step 5: Update `src/env.js` with new env var schemas**
 
 Add to the `server` object in `createEnv`:
 ```typescript
 ANTHROPIC_API_KEY: z.string(),
 BROWSER_USE_API_KEY: z.string(),
-DEEPGRAM_API_KEY: z.string(),
+UPSTASH_REDIS_REST_URL: z.string().url(),
+UPSTASH_REDIS_REST_TOKEN: z.string(),
 ELEVENLABS_API_KEY: z.string(),
 ```
 
@@ -82,15 +79,16 @@ Add to `runtimeEnv`:
 ```typescript
 ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
 BROWSER_USE_API_KEY: process.env.BROWSER_USE_API_KEY,
-DEEPGRAM_API_KEY: process.env.DEEPGRAM_API_KEY,
+UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
 ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY,
 NEXT_PUBLIC_DEEPGRAM_API_KEY: process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY,
 ```
 
-**Step 7: Commit**
+**Step 6: Commit**
 
 ```bash
-git add -A && git commit -m "feat: add dependencies for Browser Use, Claude, Deepgram, ElevenLabs, and WebSocket"
+git add package.json pnpm-lock.yaml src/env.js .env.example && git commit -m "feat: add Vercel AI SDK, Upstash Redis, Deepgram, and ElevenLabs dependencies"
 ```
 
 ---
@@ -149,8 +147,6 @@ Run:
 pnpm db:push
 ```
 
-This runs `prisma db push` which updates the database and regenerates the client.
-
 **Step 5: Commit**
 
 ```bash
@@ -159,7 +155,36 @@ git add prisma/schema.prisma && git commit -m "feat: add Conversation and Messag
 
 ---
 
-### Task 3: Browser Use Cloud service module
+### Task 3: Upstash Redis client setup
+
+**Files:**
+- Create: `src/server/redis.ts`
+
+**Step 1: Create the Redis client module**
+
+Create `src/server/redis.ts`:
+
+```typescript
+import { Redis } from "@upstash/redis";
+
+export const redis = Redis.fromEnv();
+```
+
+This uses `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` from environment automatically.
+
+Redis will be used for:
+- Caching active browser session URLs per user (so the frontend can reconnect)
+- Rate limiting API calls
+
+**Step 2: Commit**
+
+```bash
+git add src/server/redis.ts && git commit -m "feat: add Upstash Redis client"
+```
+
+---
+
+### Task 4: Browser Use Cloud service module
 
 **Files:**
 - Create: `src/server/services/browser-use.ts`
@@ -170,6 +195,7 @@ Create `src/server/services/browser-use.ts`:
 
 ```typescript
 import { env } from "~/env";
+import { redis } from "~/server/redis";
 
 const BROWSER_USE_API = "https://api.browser-use.com/api/v2";
 
@@ -199,10 +225,10 @@ export interface BrowserSession {
   status: string;
 }
 
-export async function createTask(task: string, options?: {
-  startUrl?: string;
-  maxSteps?: number;
-}): Promise<BrowserTask> {
+export async function createTask(
+  task: string,
+  options?: { startUrl?: string; maxSteps?: number },
+): Promise<BrowserTask> {
   const res = await fetch(`${BROWSER_USE_API}/tasks`, {
     method: "POST",
     headers: headers(),
@@ -253,98 +279,23 @@ export async function stopSession(sessionId: string): Promise<void> {
     body: JSON.stringify({ action: "stop" }),
   });
 }
-```
 
-**Step 2: Commit**
-
-```bash
-git add src/server/services/browser-use.ts && git commit -m "feat: add Browser Use Cloud service module"
-```
-
----
-
-### Task 4: Claude agent service module
-
-**Files:**
-- Create: `src/server/services/claude-agent.ts`
-
-**Step 1: Create the Claude agent service**
-
-Create `src/server/services/claude-agent.ts`:
-
-```typescript
-import Anthropic from "@anthropic-ai/sdk";
-import { env } from "~/env";
-
-const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-
-const SYSTEM_PROMPT = `You are SimpleSurf, a friendly browsing assistant designed to help elderly users navigate the internet.
-
-Your personality:
-- Warm, patient, and reassuring
-- Use simple, clear language — no technical jargon
-- Explain what you're doing step by step
-- If something goes wrong, stay calm and offer to try again
-
-When the user asks you to do something on the web, respond with:
-1. A friendly message explaining what you'll do (this gets shown to the user)
-2. A browser task instruction (this gets sent to Browser Use to execute)
-
-Format your response as JSON:
-{
-  "message": "What you say to the user (simple, friendly language)",
-  "browserTask": "Detailed instruction for the browser automation agent" | null,
-  "startUrl": "URL to start from, if known" | null
+// Cache the active session URL for a user in Redis (expires in 4 hours — max session length)
+export async function cacheSessionUrl(userId: string, liveUrl: string, taskId: string): Promise<void> {
+  await redis.set(`session:${userId}`, JSON.stringify({ liveUrl, taskId }), { ex: 14400 });
 }
 
-If the user is just chatting (not asking to browse), set browserTask to null.
-Always respond with valid JSON only.`;
-
-export interface AgentResponse {
-  message: string;
-  browserTask: string | null;
-  startUrl: string | null;
-}
-
-export async function getAgentResponse(
-  conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
-  userMessage: string,
-): Promise<AgentResponse> {
-  const messages: Anthropic.MessageParam[] = [
-    ...conversationHistory.map((msg) => ({
-      role: msg.role as "user" | "assistant",
-      content: msg.content,
-    })),
-    { role: "user", content: userMessage },
-  ];
-
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 1024,
-    system: SYSTEM_PROMPT,
-    messages,
-  });
-
-  const text =
-    response.content[0]?.type === "text" ? response.content[0].text : "";
-
-  try {
-    return JSON.parse(text) as AgentResponse;
-  } catch {
-    // If Claude doesn't return valid JSON, treat the whole response as a message
-    return {
-      message: text,
-      browserTask: null,
-      startUrl: null,
-    };
-  }
+export async function getCachedSession(userId: string): Promise<{ liveUrl: string; taskId: string } | null> {
+  const data = await redis.get<string>(`session:${userId}`);
+  if (!data) return null;
+  return JSON.parse(data) as { liveUrl: string; taskId: string };
 }
 ```
 
 **Step 2: Commit**
 
 ```bash
-git add src/server/services/claude-agent.ts && git commit -m "feat: add Claude agent service module"
+git add src/server/services/browser-use.ts && git commit -m "feat: add Browser Use Cloud service with Redis session caching"
 ```
 
 ---
@@ -364,7 +315,7 @@ import { env } from "~/env";
 
 const client = new ElevenLabsClient({ apiKey: env.ELEVENLABS_API_KEY });
 
-// "Rachel" — clear, warm, friendly voice good for elderly users
+// "Rachel" — clear, warm, friendly voice
 const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
 export async function textToSpeech(text: string): Promise<Buffer> {
@@ -390,241 +341,87 @@ git add src/server/services/tts.ts && git commit -m "feat: add ElevenLabs TTS se
 
 ---
 
-### Task 6: WebSocket handler and chat orchestration
+### Task 6: Chat API route with Vercel AI SDK and `browse` tool
 
 **Files:**
-- Create: `src/app/api/ws/route.ts`
+- Create: `src/app/api/chat/route.ts`
 
-**Step 1: Create the WebSocket route handler**
+**Step 1: Create the chat API route**
 
-Create `src/app/api/ws/route.ts`:
+This is the core of the app. It uses `streamText` from the Vercel AI SDK with Claude and defines a `browse` tool. When Claude decides the user wants to browse something, it calls the `browse` tool — the tool executes server-side (creates Browser Use task, gets live URL) and returns the result. The frontend receives the tool call as a message part and renders the iframe.
+
+Create `src/app/api/chat/route.ts`:
 
 ```typescript
-import type { WebSocket } from "ws";
-import { db } from "~/server/db";
-import { getAgentResponse } from "~/server/services/claude-agent";
+import { streamText, tool, type UIMessage, convertToModelMessages } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
+import { z } from "zod";
 import * as browserUse from "~/server/services/browser-use";
-import { textToSpeech } from "~/server/services/tts";
 
-interface IncomingMessage {
-  type: "chat_message" | "voice_audio";
-  text: string;
-  conversationId?: string;
-}
+const SYSTEM_PROMPT = `You are SimpleSurf, a friendly browsing assistant designed to help elderly users navigate the internet.
 
-interface OutgoingMessage {
-  type: "assistant_message" | "browser_session" | "status_update" | "conversation_id" | "error";
-  text?: string;
-  audio?: string;
-  liveUrl?: string;
-  status?: string;
-  conversationId?: string;
-  message?: string;
-}
+Your personality:
+- Warm, patient, and reassuring
+- Use simple, clear language — no technical jargon
+- Explain what you're doing step by step
+- If something goes wrong, stay calm and offer to try again
 
-function send(client: WebSocket, msg: OutgoingMessage) {
-  if (client.readyState === client.OPEN) {
-    client.send(JSON.stringify(msg));
-  }
-}
+When the user wants to visit a website or do something online:
+1. Tell them what you'll do in simple terms
+2. Use the browse tool to open the website for them
 
-export function UPGRADE(client: WebSocket) {
-  // TODO: authenticate WebSocket connections by extracting session from cookies
-  // For now, we'll need to pass userId in the first message or use a handshake
+When the user is just chatting, respond naturally without using tools.
 
-  let currentConversationId: string | null = null;
-  let userId: string | null = null;
+Always keep responses short and clear. Avoid walls of text.`;
 
-  client.on("message", async (raw) => {
-    try {
-      const data = JSON.parse(raw.toString()) as IncomingMessage & { userId?: string };
+export async function POST(req: Request) {
+  const { messages }: { messages: UIMessage[] } = await req.json();
 
-      // First message should include userId for auth
-      if (!userId && data.userId) {
-        userId = data.userId;
-      }
+  const result = streamText({
+    model: anthropic("claude-sonnet-4-20250514"),
+    system: SYSTEM_PROMPT,
+    messages: await convertToModelMessages(messages),
+    tools: {
+      browse: tool({
+        description:
+          "Open a website or perform a browsing task for the user. Use this when the user wants to visit a website, search for something, fill out a form, or do anything on the web.",
+        inputSchema: z.object({
+          task: z
+            .string()
+            .describe(
+              "Detailed description of what to do in the browser, e.g. 'Go to google.com and search for flights to Toronto'",
+            ),
+          startUrl: z
+            .string()
+            .optional()
+            .describe("The URL to start from, if known"),
+        }),
+        execute: async ({ task, startUrl }) => {
+          const browserTask = await browserUse.createTask(task, {
+            startUrl,
+          });
 
-      if (!userId) {
-        send(client, { type: "error", message: "Not authenticated" });
-        return;
-      }
+          const session = await browserUse.getSession(browserTask.sessionId);
 
-      const messageText = data.text;
-      if (!messageText) return;
-
-      // Create or use existing conversation
-      if (data.conversationId) {
-        currentConversationId = data.conversationId;
-      }
-
-      if (!currentConversationId) {
-        const conversation = await db.conversation.create({
-          data: {
-            userId,
-            title: messageText.slice(0, 100),
-          },
-        });
-        currentConversationId = conversation.id;
-        send(client, { type: "conversation_id", conversationId: conversation.id });
-      }
-
-      // Save user message
-      await db.message.create({
-        data: {
-          role: "user",
-          content: messageText,
-          conversationId: currentConversationId,
+          return {
+            taskId: browserTask.id,
+            sessionId: browserTask.sessionId,
+            liveUrl: session.liveUrl ?? null,
+            status: "running",
+          };
         },
-      });
-
-      // Get conversation history for context
-      const history = await db.message.findMany({
-        where: { conversationId: currentConversationId },
-        orderBy: { createdAt: "asc" },
-        take: 50,
-      });
-
-      const conversationHistory = history.map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      }));
-
-      // Get Claude's response
-      send(client, { type: "status_update", status: "Thinking..." });
-      const agentResponse = await getAgentResponse(conversationHistory, messageText);
-
-      // Save assistant message
-      const savedMessage = await db.message.create({
-        data: {
-          role: "assistant",
-          content: agentResponse.message,
-          conversationId: currentConversationId,
-        },
-      });
-
-      // Generate TTS audio
-      let audioBase64: string | undefined;
-      try {
-        const audioBuffer = await textToSpeech(agentResponse.message);
-        audioBase64 = audioBuffer.toString("base64");
-      } catch (err) {
-        console.error("TTS failed:", err);
-        // Non-fatal — still send text response
-      }
-
-      // Send assistant message to client
-      send(client, {
-        type: "assistant_message",
-        text: agentResponse.message,
-        audio: audioBase64,
-      });
-
-      // If there's a browser task, execute it
-      if (agentResponse.browserTask) {
-        send(client, {
-          type: "status_update",
-          status: "Opening browser...",
-        });
-
-        try {
-          const task = await browserUse.createTask(agentResponse.browserTask, {
-            startUrl: agentResponse.startUrl ?? undefined,
-          });
-
-          // Update message with browser task ID
-          await db.message.update({
-            where: { id: savedMessage.id },
-            data: {
-              browserTaskId: task.id,
-              browserStatus: "running",
-            },
-          });
-
-          // Get the live session URL
-          const session = await browserUse.getSession(task.sessionId);
-          if (session.liveUrl) {
-            send(client, {
-              type: "browser_session",
-              liveUrl: session.liveUrl,
-              status: "running",
-            });
-          }
-
-          send(client, {
-            type: "status_update",
-            status: "Working on it...",
-          });
-
-          // Poll for task completion
-          const pollInterval = setInterval(async () => {
-            try {
-              const result = await browserUse.getTask(task.id);
-              if (result.status === "completed" || result.status === "failed") {
-                clearInterval(pollInterval);
-
-                await db.message.update({
-                  where: { id: savedMessage.id },
-                  data: { browserStatus: result.status },
-                });
-
-                send(client, {
-                  type: "status_update",
-                  status: result.status === "completed" ? "Done!" : "Something went wrong",
-                });
-
-                if (result.output) {
-                  // Ask Claude to summarize the result for the user
-                  const summaryResponse = await getAgentResponse(
-                    [...conversationHistory, { role: "assistant", content: agentResponse.message }],
-                    `The browser task completed. Here's the result: ${result.output}. Summarize this for the user in simple terms.`,
-                  );
-
-                  await db.message.create({
-                    data: {
-                      role: "assistant",
-                      content: summaryResponse.message,
-                      conversationId: currentConversationId!,
-                    },
-                  });
-
-                  send(client, {
-                    type: "assistant_message",
-                    text: summaryResponse.message,
-                  });
-                }
-              }
-            } catch (err) {
-              clearInterval(pollInterval);
-              console.error("Task polling error:", err);
-            }
-          }, 3000);
-
-          // Safety timeout: stop polling after 2 minutes
-          setTimeout(() => clearInterval(pollInterval), 120000);
-        } catch (err) {
-          console.error("Browser Use error:", err);
-          send(client, {
-            type: "status_update",
-            status: "I had trouble opening the browser. Want me to try again?",
-          });
-        }
-      }
-    } catch (err) {
-      console.error("WebSocket message error:", err);
-      send(client, { type: "error", message: "Something went wrong. Please try again." });
-    }
+      }),
+    },
   });
 
-  client.once("close", () => {
-    console.log("Client disconnected");
-  });
+  return result.toUIMessageStreamResponse();
 }
 ```
 
 **Step 2: Commit**
 
 ```bash
-git add src/app/api/ws/route.ts && git commit -m "feat: add WebSocket handler with chat orchestration"
+git add src/app/api/chat/route.ts && git commit -m "feat: add chat API route with Vercel AI SDK and browse tool"
 ```
 
 ---
@@ -660,7 +457,6 @@ export const conversationRouter = createTRPCRouter({
   getMessages: protectedProcedure
     .input(z.object({ conversationId: z.string() }))
     .query(async ({ ctx, input }) => {
-      // Verify the conversation belongs to this user
       const conversation = await ctx.db.conversation.findFirst({
         where: {
           id: input.conversationId,
@@ -693,7 +489,7 @@ export const conversationRouter = createTRPCRouter({
 
 **Step 2: Add conversation router to root**
 
-In `src/server/api/root.ts`, add the import and register:
+In `src/server/api/root.ts`, add the import:
 
 ```typescript
 import { conversationRouter } from "~/server/api/routers/conversation";
@@ -715,127 +511,76 @@ git add src/server/api/routers/conversation.ts src/server/api/root.ts && git com
 
 ---
 
-### Task 8: Frontend — Chat panel component
+### Task 8: Frontend — Chat panel with `useChat` and tool part rendering
 
 **Files:**
 - Create: `src/app/_components/chat-panel.tsx`
 
 **Step 1: Create the chat panel component**
 
+This uses the Vercel AI SDK's `useChat` hook. It listens for `tool-browse` parts in assistant messages and calls `onBrowserSession` when a live URL is returned.
+
 Create `src/app/_components/chat-panel.tsx`:
 
 ```tsx
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
+import { useChat } from "@ai-sdk/react";
+import { useState, useRef, useEffect } from "react";
 
 interface ChatPanelProps {
   onBrowserSession: (liveUrl: string) => void;
   onStatusUpdate: (status: string) => void;
-  userId: string;
 }
 
-export function ChatPanel({ onBrowserSession, onStatusUpdate, userId }: ChatPanelProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+export function ChatPanel({ onBrowserSession, onStatusUpdate }: ChatPanelProps) {
   const [input, setInput] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const { messages, sendMessage, status } = useChat({
+    api: "/api/chat",
+  });
 
+  const isLoading = status === "streaming" || status === "submitted";
+
+  // Scroll to bottom on new messages
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const connectWebSocket = useCallback(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}/api/ws`);
-
-    ws.onopen = () => {
-      setIsConnected(true);
-      // Send userId for auth
-      ws.send(JSON.stringify({ type: "chat_message", text: "", userId }));
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data as string) as {
-        type: string;
-        text?: string;
-        audio?: string;
-        liveUrl?: string;
-        status?: string;
-        message?: string;
-      };
-
-      switch (data.type) {
-        case "assistant_message":
-          if (data.text) {
-            setMessages((prev) => [
-              ...prev,
-              { id: crypto.randomUUID(), role: "assistant", content: data.text! },
-            ]);
-          }
-          // Play audio if available
-          if (data.audio) {
-            const audioBlob = new Blob(
-              [Uint8Array.from(atob(data.audio), (c) => c.charCodeAt(0))],
-              { type: "audio/mpeg" },
-            );
-            const audioUrl = URL.createObjectURL(audioBlob);
-            if (audioRef.current) {
-              audioRef.current.src = audioUrl;
-              audioRef.current.play().catch(console.error);
-            }
-          }
-          break;
-        case "browser_session":
-          if (data.liveUrl) onBrowserSession(data.liveUrl);
-          break;
-        case "status_update":
-          if (data.status) onStatusUpdate(data.status);
-          break;
-        case "error":
-          onStatusUpdate(data.message ?? "An error occurred");
-          break;
-      }
-    };
-
-    ws.onclose = () => {
-      setIsConnected(false);
-      // Auto-reconnect after 3 seconds
-      setTimeout(connectWebSocket, 3000);
-    };
-
-    wsRef.current = ws;
-  }, [userId, onBrowserSession, onStatusUpdate]);
-
+  // Watch for browse tool results in messages
   useEffect(() => {
-    connectWebSocket();
-    return () => {
-      wsRef.current?.close();
-    };
-  }, [connectWebSocket]);
+    for (const message of messages) {
+      if (message.role !== "assistant") continue;
+      for (const part of message.parts) {
+        if (
+          part.type === "tool-browse" &&
+          part.state === "output-available" &&
+          part.output?.liveUrl
+        ) {
+          onBrowserSession(part.output.liveUrl as string);
+          onStatusUpdate(
+            part.output.status === "running"
+              ? "Browsing..."
+              : "Done!"
+          );
+        }
+      }
+    }
+  }, [messages, onBrowserSession, onStatusUpdate]);
 
-  const sendMessage = () => {
+  // Update status based on streaming state
+  useEffect(() => {
+    if (isLoading) {
+      onStatusUpdate("Thinking...");
+    }
+  }, [isLoading, onStatusUpdate]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     const text = input.trim();
-    if (!text || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role: "user", content: text },
-    ]);
-
-    wsRef.current.send(JSON.stringify({ type: "chat_message", text }));
+    if (!text || isLoading) return;
+    sendMessage({ text });
     setInput("");
   };
 
@@ -844,22 +589,18 @@ export function ChatPanel({ onBrowserSession, onStatusUpdate, userId }: ChatPane
       {/* Header */}
       <div className="border-b border-gray-200 bg-white px-6 py-4">
         <h2 className="text-xl font-semibold text-gray-800">Chat</h2>
-        <div className="flex items-center gap-2 mt-1">
-          <div
-            className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
-          />
-          <span className="text-sm text-gray-500">
-            {isConnected ? "Connected" : "Reconnecting..."}
-          </span>
-        </div>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center text-gray-400 mt-12">
-            <p className="text-lg">Hi there! What website would you like to visit today?</p>
-            <p className="text-base mt-2">You can type or use the microphone to speak.</p>
+            <p className="text-lg">
+              Hi there! What website would you like to visit today?
+            </p>
+            <p className="text-base mt-2">
+              You can type or use the microphone to speak.
+            </p>
           </div>
         )}
         {messages.map((msg) => (
@@ -874,22 +615,53 @@ export function ChatPanel({ onBrowserSession, onStatusUpdate, userId }: ChatPane
                   : "bg-white text-gray-800 border border-gray-200 shadow-sm"
               }`}
             >
-              {msg.content}
+              {msg.parts.map((part, i) => {
+                switch (part.type) {
+                  case "text":
+                    return <span key={i}>{part.text}</span>;
+                  case "tool-browse":
+                    if (part.state === "input-available" || part.state === "input-streaming") {
+                      return (
+                        <p key={i} className="text-sm text-gray-500 italic mt-2">
+                          Opening browser...
+                        </p>
+                      );
+                    }
+                    if (part.state === "output-available") {
+                      return (
+                        <p key={i} className="text-sm text-green-600 mt-2">
+                          Browser is ready!
+                        </p>
+                      );
+                    }
+                    if (part.state === "output-error") {
+                      return (
+                        <p key={i} className="text-sm text-red-500 mt-2">
+                          Something went wrong with the browser. Want me to try again?
+                        </p>
+                      );
+                    }
+                    return null;
+                  default:
+                    return null;
+                }
+              })}
             </div>
           </div>
         ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl bg-white px-5 py-3 text-lg text-gray-400 border border-gray-200 shadow-sm">
+              Thinking...
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input area */}
       <div className="border-t border-gray-200 bg-white px-6 py-4">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage();
-          }}
-          className="flex gap-3"
-        >
+        <form onSubmit={handleSubmit} className="flex gap-3">
           <input
             type="text"
             value={input}
@@ -899,16 +671,13 @@ export function ChatPanel({ onBrowserSession, onStatusUpdate, userId }: ChatPane
           />
           <button
             type="submit"
-            disabled={!input.trim() || !isConnected}
+            disabled={!input.trim() || isLoading}
             className="rounded-full bg-blue-600 px-8 py-4 text-lg font-semibold text-white transition hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             Send
           </button>
         </form>
       </div>
-
-      {/* Hidden audio element for TTS playback */}
-      <audio ref={audioRef} className="hidden" />
     </div>
   );
 }
@@ -917,7 +686,7 @@ export function ChatPanel({ onBrowserSession, onStatusUpdate, userId }: ChatPane
 **Step 2: Commit**
 
 ```bash
-git add src/app/_components/chat-panel.tsx && git commit -m "feat: add chat panel component with WebSocket"
+git add src/app/_components/chat-panel.tsx && git commit -m "feat: add chat panel with useChat and browse tool rendering"
 ```
 
 ---
@@ -942,8 +711,8 @@ export function BrowserView({ liveUrl }: BrowserViewProps) {
   if (!liveUrl) {
     return (
       <div className="flex h-full items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🌐</div>
+        <div className="text-center px-8">
+          <p className="text-5xl mb-6">🌐</p>
           <p className="text-xl text-gray-500">
             Tell me what you&apos;d like to browse
           </p>
@@ -974,12 +743,13 @@ git add src/app/_components/browser-view.tsx && git commit -m "feat: add browser
 
 ---
 
-### Task 10: Frontend — Main browse page with side-by-side layout
+### Task 10: Frontend — Browse page with side-by-side layout
 
 **Files:**
 - Create: `src/app/browse/page.tsx`
+- Create: `src/app/browse/browse-client.tsx`
 
-**Step 1: Create the browse page**
+**Step 1: Create the browse page (server component)**
 
 Create `src/app/browse/page.tsx`:
 
@@ -995,7 +765,7 @@ export default async function BrowsePage() {
     redirect("/");
   }
 
-  return <BrowseClient userId={session.user.id} userName={session.user.name} />;
+  return <BrowseClient userName={session.user.name} />;
 }
 ```
 
@@ -1011,11 +781,10 @@ import { ChatPanel } from "~/app/_components/chat-panel";
 import { BrowserView } from "~/app/_components/browser-view";
 
 interface BrowseClientProps {
-  userId: string;
   userName: string;
 }
 
-export function BrowseClient({ userId, userName }: BrowseClientProps) {
+export function BrowseClient({ userName }: BrowseClientProps) {
   const [liveUrl, setLiveUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("Ready");
 
@@ -1045,7 +814,6 @@ export function BrowseClient({ userId, userName }: BrowseClientProps) {
         {/* Chat panel — 40% */}
         <div className="w-2/5">
           <ChatPanel
-            userId={userId}
             onBrowserSession={setLiveUrl}
             onStatusUpdate={setStatus}
           />
@@ -1069,10 +837,11 @@ git add src/app/browse/ && git commit -m "feat: add browse page with side-by-sid
 
 ---
 
-### Task 11: Voice — Deepgram STT (client-side)
+### Task 11: Voice — Deepgram STT (client-side) and ElevenLabs TTS playback
 
 **Files:**
 - Create: `src/app/_components/voice-button.tsx`
+- Create: `src/app/api/tts/route.ts`
 - Modify: `src/app/_components/chat-panel.tsx`
 
 **Step 1: Create the voice button component**
@@ -1100,10 +869,9 @@ export function VoiceButton({ onTranscript, disabled }: VoiceButtonProps) {
       const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
       mediaRecorderRef.current = mediaRecorder;
 
-      // Connect to Deepgram WebSocket
       const dgApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
       const socket = new WebSocket(
-        `wss://api.deepgram.com/v1/listen?model=nova-3&punctuate=true&smart_format=true`,
+        "wss://api.deepgram.com/v1/listen?model=nova-3&punctuate=true&smart_format=true",
         ["token", dgApiKey ?? ""],
       );
       socketRef.current = socket;
@@ -1115,7 +883,7 @@ export function VoiceButton({ onTranscript, disabled }: VoiceButtonProps) {
             socket.send(event.data);
           }
         };
-        mediaRecorder.start(250); // Send chunks every 250ms
+        mediaRecorder.start(250);
       };
 
       socket.onmessage = (event) => {
@@ -1155,7 +923,7 @@ export function VoiceButton({ onTranscript, disabled }: VoiceButtonProps) {
       onMouseLeave={stopListening}
       onTouchStart={() => void startListening()}
       onTouchEnd={stopListening}
-      className={`flex items-center justify-center rounded-full p-4 text-2xl transition ${
+      className={`flex items-center justify-center rounded-full p-4 text-2xl transition min-w-[56px] min-h-[56px] ${
         isListening
           ? "bg-red-500 text-white scale-110 shadow-lg"
           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -1168,78 +936,133 @@ export function VoiceButton({ onTranscript, disabled }: VoiceButtonProps) {
 }
 ```
 
-**Step 2: Integrate voice button into chat panel**
+**Step 2: Create TTS API route**
 
-In `src/app/_components/chat-panel.tsx`, add the import at the top:
+This route takes text and returns audio from ElevenLabs. The frontend calls this to play assistant responses aloud.
+
+Create `src/app/api/tts/route.ts`:
+
+```typescript
+import { NextResponse } from "next/server";
+import { textToSpeech } from "~/server/services/tts";
+
+export async function POST(req: Request) {
+  const { text }: { text: string } = await req.json();
+
+  if (!text) {
+    return NextResponse.json({ error: "No text provided" }, { status: 400 });
+  }
+
+  try {
+    const audioBuffer = await textToSpeech(text);
+    return new NextResponse(audioBuffer, {
+      headers: {
+        "Content-Type": "audio/mpeg",
+        "Content-Length": audioBuffer.length.toString(),
+      },
+    });
+  } catch (err) {
+    console.error("TTS error:", err);
+    return NextResponse.json({ error: "TTS failed" }, { status: 500 });
+  }
+}
+```
+
+**Step 3: Update chat panel with voice button and TTS playback**
+
+In `src/app/_components/chat-panel.tsx`, add the import:
 ```typescript
 import { VoiceButton } from "./voice-button";
 ```
 
-Add a `sendVoiceMessage` function inside `ChatPanel`:
+Add a ref for audio playback and a TTS function inside `ChatPanel`:
 ```typescript
-const sendVoiceMessage = (text: string) => {
-  if (!text.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  setMessages((prev) => [
-    ...prev,
-    { id: crypto.randomUUID(), role: "user", content: text },
-  ]);
-
-  wsRef.current.send(JSON.stringify({ type: "voice_audio", text }));
+const playTTS = async (text: string) => {
+  try {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    if (audioRef.current) {
+      audioRef.current.src = url;
+      audioRef.current.play().catch(console.error);
+    }
+  } catch (err) {
+    console.error("TTS playback error:", err);
+  }
 };
 ```
 
-Add the `VoiceButton` to the input area, next to the text input. Replace the form section:
+Add a `sendVoiceMessage` function:
+```typescript
+const sendVoiceMessage = (text: string) => {
+  if (!text.trim() || isLoading) return;
+  sendMessage({ text });
+};
+```
+
+Add an effect to play TTS for new assistant messages:
+```typescript
+const lastPlayedRef = useRef<string | null>(null);
+
+useEffect(() => {
+  const lastMsg = messages[messages.length - 1];
+  if (lastMsg?.role === "assistant" && lastMsg.id !== lastPlayedRef.current) {
+    const textParts = lastMsg.parts
+      .filter((p) => p.type === "text")
+      .map((p) => (p as { text: string }).text)
+      .join(" ");
+    if (textParts && status !== "streaming") {
+      lastPlayedRef.current = lastMsg.id;
+      void playTTS(textParts);
+    }
+  }
+}, [messages, status]);
+```
+
+Update the input area JSX to include the voice button:
 ```tsx
 <div className="border-t border-gray-200 bg-white px-6 py-4">
   <div className="flex items-center gap-3">
-    <VoiceButton onTranscript={sendVoiceMessage} disabled={!isConnected} />
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        sendMessage();
-      }}
-      className="flex flex-1 gap-3"
-    >
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Type a message..."
-        className="flex-1 rounded-full border border-gray-300 px-6 py-4 text-lg text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-      />
-      <button
-        type="submit"
-        disabled={!input.trim() || !isConnected}
-        className="rounded-full bg-blue-600 px-8 py-4 text-lg font-semibold text-white transition hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-      >
-        Send
-      </button>
+    <VoiceButton onTranscript={sendVoiceMessage} disabled={isLoading} />
+    <form onSubmit={handleSubmit} className="flex flex-1 gap-3">
+      <input ... />
+      <button ... >Send</button>
     </form>
   </div>
 </div>
 ```
 
-**Step 3: Commit**
+Add a hidden audio element before the closing `</div>`:
+```tsx
+<audio ref={audioRef} className="hidden" />
+```
+
+**Step 4: Commit**
 
 ```bash
-git add src/app/_components/voice-button.tsx src/app/_components/chat-panel.tsx && git commit -m "feat: add Deepgram voice input with hold-to-speak"
+git add src/app/_components/voice-button.tsx src/app/api/tts/route.ts src/app/_components/chat-panel.tsx && git commit -m "feat: add voice input (Deepgram STT) and voice output (ElevenLabs TTS)"
 ```
 
 ---
 
-### Task 12: Update homepage with link to browse page
+### Task 12: Update homepage to redirect authenticated users to browse
 
 **Files:**
 - Modify: `src/app/page.tsx`
 
-**Step 1: Simplify homepage and add browse link**
+**Step 1: Replace the homepage**
 
 Replace the content of `src/app/page.tsx`:
 
 ```tsx
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 
 import { auth } from "~/server/better-auth";
 import { getSession } from "~/server/better-auth/server";
@@ -1247,7 +1070,6 @@ import { getSession } from "~/server/better-auth/server";
 export default async function Home() {
   const session = await getSession();
 
-  // If logged in, go straight to browse
   if (session?.user) {
     redirect("/browse");
   }

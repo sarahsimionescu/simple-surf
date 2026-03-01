@@ -19,6 +19,10 @@ export const env = createEnv({
       .default("development"),
     VERCEL_URL: z.string().url(),
     BROWSER_USE_API_KEY: z.string().min(1),
+    AI_GATEWAY_API_KEY: z.string().min(1),
+    SUPERMEMORY_API_KEY: z.string().min(1),
+    KV_REST_API_URL: z.string().url(),
+    KV_REST_API_TOKEN: z.string().min(1),
   },
 
   /**
@@ -42,6 +46,10 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
     BROWSER_USE_API_KEY: process.env.BROWSER_USE_API_KEY,
+    AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
+    SUPERMEMORY_API_KEY: process.env.SUPERMEMORY_API_KEY,
+    KV_REST_API_URL: process.env.KV_REST_API_URL,
+    KV_REST_API_TOKEN: process.env.KV_REST_API_TOKEN,
     VERCEL_URL: process.env.VERCEL_URL,
     NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
   },

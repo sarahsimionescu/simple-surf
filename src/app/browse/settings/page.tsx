@@ -8,11 +8,11 @@ export default async function SettingsPage() {
 
   return (
     <main
-      className="flex min-h-screen flex-col bg-[#F7F7F5] text-[#141414]"
+      className="flex h-screen flex-col bg-[#F7F7F5] text-[#141414]"
       style={{ colorScheme: "light" }}
     >
       {/* nav */}
-      <nav className="flex items-center justify-between px-8 py-5">
+      <nav className="flex shrink-0 items-center justify-between px-8 py-5">
         <a
           href="/browse"
           className="font-[family-name:var(--font-syne)] text-lg font-bold lowercase tracking-tight transition-opacity hover:opacity-70"
@@ -28,8 +28,8 @@ export default async function SettingsPage() {
       </nav>
 
       {/* content */}
-      <div className="flex flex-1 flex-col px-8 pb-8">
-        <div className="mb-6">
+      <div className="flex min-h-0 flex-1 flex-col px-8 pb-8">
+        <div className="mb-6 shrink-0">
           <h1 className="font-[family-name:var(--font-syne)] text-2xl font-bold lowercase tracking-tight">
             your memory
           </h1>
@@ -37,7 +37,7 @@ export default async function SettingsPage() {
             Everything SimpleSurf remembers from your conversations.
           </p>
         </div>
-        <div className="flex-1">
+        <div className="min-h-0 flex-1">
           <MemoryGraphView />
         </div>
       </div>

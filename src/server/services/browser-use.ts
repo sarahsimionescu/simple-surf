@@ -1,98 +1,25 @@
-import { env } from "~/env";
+import { BrowserUse } from "browser-use-sdk";
 
-const BASE_URL = "https://api.browser-use.com/api/v2";
+const client = new BrowserUse();
 
-const headers = {
-  "Content-Type": "application/json",
-  "X-Browser-Use-API-Key": env.BROWSER_USE_API_KEY,
-};
-
-export async function createBrowserSession(opts?: {
-  startUrl?: string;
-}) {
-  const res = await fetch(`${BASE_URL}/sessions`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      startUrl: opts?.startUrl,
-    }),
+export async function createBrowserSession() {
+  const session = await client.sessions.create({
+    startUrl: "https://www.google.com",
+    keepAlive: true,
+    persistMemory: true,
   });
-  if (!res.ok) throw new Error(`Browser Use: failed to create session: ${res.statusText}`);
-  return res.json() as Promise<{
-    id: string;
-    liveUrl: string;
-    status: string;
-  }>;
+  return { id: session.id, liveUrl: session.liveUrl, status: session.status };
 }
 
-export async function deleteBrowserSession(sessionId: string) {
-  const res = await fetch(`${BASE_URL}/sessions/${sessionId}`, {
-    method: "DELETE",
-    headers,
+export async function runBrowserTask(sessionId: string, task: string) {
+  const created = await client.tasks.create({
+    task,
+    sessionId,
   });
-  if (!res.ok) throw new Error(`Browser Use: failed to delete session: ${res.statusText}`);
+  const result = await client.tasks.wait(created.id);
+  return { output: result.output ?? "Task completed.", status: result.status };
 }
 
-export async function createBrowserTask(opts: {
-  sessionId: string;
-  task: string;
-  maxSteps?: number;
-}) {
-  const res = await fetch(`${BASE_URL}/tasks`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      sessionId: opts.sessionId,
-      task: opts.task,
-      maxSteps: opts.maxSteps ?? 20,
-    }),
-  });
-  if (!res.ok) throw new Error(`Browser Use: failed to create task: ${res.statusText}`);
-  return res.json() as Promise<{ id: string; status: string }>;
-}
-
-export async function getTaskStatus(taskId: string) {
-  const res = await fetch(`${BASE_URL}/tasks/${taskId}/status`, {
-    method: "GET",
-    headers,
-  });
-  if (!res.ok) throw new Error(`Browser Use: failed to get task status: ${res.statusText}`);
-  return res.json() as Promise<{
-    id: string;
-    status: string;
-    output?: string;
-    finished_at?: string;
-  }>;
-}
-
-export async function pollTaskUntilDone(
-  taskId: string,
-  intervalMs = 2000,
-  timeoutMs = 120000,
-): Promise<{ output: string; status: string }> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const status = await getTaskStatus(taskId);
-    if (status.status === "finished" || status.status === "stopped") {
-      return { output: status.output ?? "Task completed with no output.", status: status.status };
-    }
-    await new Promise((r) => setTimeout(r, intervalMs));
-  }
-  throw new Error("Browser Use: task timed out");
-}
-
-export async function pauseTask(taskId: string) {
-  const res = await fetch(`${BASE_URL}/tasks/${taskId}/pause`, {
-    method: "POST",
-    headers,
-  });
-  if (!res.ok) throw new Error(`Browser Use: failed to pause task: ${res.statusText}`);
-}
-
-export async function resumeTask(taskId: string) {
-  const res = await fetch(`${BASE_URL}/tasks/${taskId}/resume`, {
-    method: "POST",
-    headers,
-  });
-  if (!res.ok) throw new Error(`Browser Use: failed to resume task: ${res.statusText}`);
+export async function stopBrowserSession(sessionId: string) {
+  await client.sessions.stop(sessionId);
 }

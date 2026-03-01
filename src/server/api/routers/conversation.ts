@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
   createBrowserSession,
-  deleteBrowserSession,
+  stopBrowserSession,
 } from "~/server/services/browser-use";
 
 export const conversationRouter = createTRPCRouter({
@@ -10,9 +10,7 @@ export const conversationRouter = createTRPCRouter({
     .input(z.object({ title: z.string().optional() }).optional())
     .mutation(async ({ ctx, input }) => {
       // Create Browser Use Cloud session
-      const browserSession = await createBrowserSession({
-        startUrl: "https://www.google.com",
-      });
+      const browserSession = await createBrowserSession();
 
       // Create conversation in DB
       const conversation = await ctx.db.conversation.create({
@@ -56,7 +54,7 @@ export const conversationRouter = createTRPCRouter({
       // Clean up Browser Use session
       if (conversation.browserSessionId) {
         try {
-          await deleteBrowserSession(conversation.browserSessionId);
+          await stopBrowserSession(conversation.browserSessionId);
         } catch {
           // Session may already be expired
         }

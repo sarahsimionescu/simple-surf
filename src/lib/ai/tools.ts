@@ -1,9 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import {
-  createBrowserTask,
-  pollTaskUntilDone,
-} from "~/server/services/browser-use";
+import { runBrowserTask } from "~/server/services/browser-use";
 
 export function createBrowseTool(browserSessionId: string) {
   return tool({
@@ -17,11 +14,7 @@ export function createBrowseTool(browserSessionId: string) {
         ),
     }),
     execute: async ({ instruction }) => {
-      const task = await createBrowserTask({
-        sessionId: browserSessionId,
-        task: instruction,
-      });
-      const result = await pollTaskUntilDone(task.id);
+      const result = await runBrowserTask(browserSessionId, instruction);
       return result.output;
     },
   });

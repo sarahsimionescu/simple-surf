@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useMemo } from "react";
 
 const VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // ElevenLabs "Rachel" default
 const MODEL_ID = "eleven_multilingual_v2";
@@ -169,6 +169,7 @@ export function useStreamingTTS(): StreamingTTSControls {
   }, []);
 
   const stop = useCallback(() => {
+    if (!activeRef.current && !wsRef.current) return;
     clog("STOP", "Stopping streaming TTS");
     // Close WebSocket
     if (wsRef.current) {
@@ -192,5 +193,8 @@ export function useStreamingTTS(): StreamingTTSControls {
 
   const isActive = useCallback(() => activeRef.current, []);
 
-  return { start, sendText, finish, stop, isActive };
+  return useMemo(
+    () => ({ start, sendText, finish, stop, isActive }),
+    [start, sendText, finish, stop, isActive],
+  );
 }

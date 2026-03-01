@@ -6,7 +6,7 @@ import { Geist, Syne } from "next/font/google";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
-  title: "SimpleSurf",
+  title: "SimpleSurf | The Internet, Made Easy",
   description: "A friendly browsing assistant for the web",
   icons: [{ rel: "icon", url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>" }],
 };

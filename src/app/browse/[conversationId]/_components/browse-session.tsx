@@ -144,13 +144,16 @@ export function BrowseSession({
   conversationId,
   browserLiveUrl,
   initialMessages = [],
+  isNew = false,
 }: {
   conversationId: string;
   browserLiveUrl: string | null;
   initialMessages?: import("ai").UIMessage[];
+  isNew?: boolean;
 }) {
   const [input, setInput] = useState("");
   const [activeScreen, setActiveScreen] = useState<ActiveScreen | null>(null);
+  const submittedToolCalls = useRef<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // request geolocation on mount, store in cookie for server access
@@ -193,19 +196,19 @@ export function BrowseSession({
           "toolCallId" in part &&
           "state" in part &&
           part.state === "input-available" &&
-          "input" in part
+          !submittedToolCalls.current.has((part as { toolCallId: string }).toolCallId)
         ) {
-          const toolInput = part.input as {
-            type: "select-one" | "select-multi" | "text" | "auth";
-            prompt: string;
-            options?: string[];
-          };
-          if (part.type === "tool-renderScreen") {
+          if (part.type === "tool-renderScreen" && "input" in part) {
+            const toolInput = part.input as {
+              type: "select-one" | "select-multi" | "text" | "auth";
+              prompt: string;
+              options?: string[];
+            };
             setActiveScreen({
               type: toolInput.type,
               prompt: toolInput.prompt,
               options: toolInput.options,
-              toolCallId: part.toolCallId,
+              toolCallId: (part as { toolCallId: string }).toolCallId,
             });
             return;
           }
@@ -217,6 +220,7 @@ export function BrowseSession({
 
   const handleRenderScreenSubmit = (value: string) => {
     if (!activeScreen) return;
+    submittedToolCalls.current.add(activeScreen.toolCallId);
     void addToolOutput({
       tool: "renderScreen",
       toolCallId: activeScreen.toolCallId,
@@ -241,7 +245,7 @@ export function BrowseSession({
           />
         )}
 
-        {activeScreen && (
+        {activeScreen && activeScreen.type !== "auth" && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#F7F7F5]/90 backdrop-blur-sm">
             <div className="w-full max-w-xl">
               <RenderScreen
@@ -250,6 +254,22 @@ export function BrowseSession({
                 options={activeScreen.options}
                 onSubmit={handleRenderScreenSubmit}
               />
+            </div>
+          </div>
+        )}
+
+        {activeScreen && activeScreen.type === "auth" && (
+          <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center px-6 py-4">
+            <div className="flex items-center gap-4 rounded-2xl bg-white px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+              <span className="text-[15px] font-medium text-[#141414]">
+                Log in using the browser above, then click:
+              </span>
+              <button
+                onClick={() => handleRenderScreenSubmit("User completed authentication")}
+                className="cursor-pointer rounded-full bg-[#141414] px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#0077B6]"
+              >
+                I&apos;m Done Logging In
+              </button>
             </div>
           </div>
         )}
@@ -278,6 +298,27 @@ export function BrowseSession({
         {/* messages */}
         <div className="flex-1 overflow-y-auto px-5 py-6">
           <div className="flex flex-col gap-5">
+            {isNew && messages.length === 0 && !isLoading && (
+              <div className="mt-auto flex flex-col gap-2 pt-4">
+                <p className="text-xs font-medium uppercase tracking-widest text-[#9A9A97]">
+                  try something like
+                </p>
+                {[
+                  "What's the weather like today?",
+                  "Find coffee shops nearby",
+                  "Look up today's top news",
+                  "Search for easy dinner recipes",
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => void sendMessage({ text: suggestion })}
+                    className="cursor-pointer rounded-xl border border-[#141414]/[0.06] bg-white px-4 py-3 text-left text-[14px] text-[#4A4A48] transition-all duration-200 hover:border-[#0077B6]/30 hover:text-[#141414]"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
             {messages.map((message) => (
               <div key={message.id} className="flex flex-col gap-1">
                 {message.parts.map((part, i) => {

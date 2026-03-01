@@ -21,7 +21,7 @@ export function LandingNav() {
       }`}
     >
       <span className="font-[family-name:var(--font-syne)] text-lg font-bold tracking-tight lowercase">
-        simplesurf
+        simplesurf 🌊
       </span>
       <SignInButton className="cursor-pointer rounded-full bg-transparent px-6 py-3 text-base font-semibold text-[#141414] ring-1 ring-[#141414]/20 transition-all duration-300 hover:bg-[#141414] hover:text-[#F7F7F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]">
         Sign in

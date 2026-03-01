@@ -190,28 +190,26 @@ export function BrowseSession({
                     "state" in part &&
                     "toolCallId" in part
                   ) {
+                    const isRenderScreen = part.type === "tool-renderScreen";
+
                     if (part.state === "input-available") {
+                      // only show status for renderScreen (user action needed)
+                      // other tools are just the AI working in the browser
                       return (
                         <div
                           key={`${message.id}-${i}`}
-                          className="flex items-center gap-2 py-1 text-[13px] text-[#0077B6]"
+                          className="flex items-center gap-2 py-1 text-[13px] text-[#4A4A48]"
                         >
-                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0077B6]" />
-                          Waiting for your response
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4A4A48]" />
+                          {isRenderScreen
+                            ? "Needs your input — check the screen on the left"
+                            : "Browsing..."}
                         </div>
                       );
                     }
+                    // hide tool outputs — the text response covers it
                     if (part.state === "output-available") {
-                      return (
-                        <div
-                          key={`${message.id}-${i}`}
-                          className="flex justify-end"
-                        >
-                          <div className="max-w-[85%] rounded-2xl rounded-br-md bg-[#141414]/70 px-4 py-3 text-[15px] text-white">
-                            {String((part as { output: unknown }).output)}
-                          </div>
-                        </div>
-                      );
+                      return null;
                     }
                   }
 

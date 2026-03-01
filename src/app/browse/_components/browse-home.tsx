@@ -44,13 +44,13 @@ export function BrowseHome({
         <div className="flex items-center gap-4">
           <a
             href="/browse/settings"
-            className="text-base font-medium text-[#4A4A48] transition-colors duration-200 hover:text-[#141414] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
+            className="text-base font-medium text-[#4A4A48] underline-offset-4 transition-colors duration-200 hover:text-[#141414] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
           >
             Settings
           </a>
           <button
             onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => router.push("/") } })}
-            className="text-base font-medium text-[#4A4A48] transition-colors duration-200 hover:text-[#141414]"
+            className="cursor-pointer text-base font-medium text-[#4A4A48] underline-offset-4 transition-colors duration-200 hover:text-[#141414] hover:underline"
           >
             Sign Out
           </button>

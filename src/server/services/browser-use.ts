@@ -1,10 +1,10 @@
 import { env } from "~/env";
 
-const BASE_URL = "https://api.browser-use.com/api/v1";
+const BASE_URL = "https://api.browser-use.com/api/v2";
 
 const headers = {
   "Content-Type": "application/json",
-  Authorization: `Bearer ${env.BROWSER_USE_API_KEY}`,
+  "X-Browser-Use-API-Key": env.BROWSER_USE_API_KEY,
 };
 
 export async function createBrowserSession(opts?: {

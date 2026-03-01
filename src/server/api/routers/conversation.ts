@@ -37,7 +37,13 @@ export const conversationRouter = createTRPCRouter({
 
   list: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.conversation.findMany({
-      where: { userId: ctx.session.user.id },
+      where: {
+        userId: ctx.session.user.id,
+        OR: [
+          { title: { not: null } },
+          { lastVisitedUrl: { not: null } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
       take: 20,
     });

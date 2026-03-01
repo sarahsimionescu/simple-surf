@@ -22,6 +22,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/elevenlabs": "^2.0.21",
     "@ai-sdk/gateway": "^3.0.59",
     "@ai-sdk/react": "^3.0.107",
     "@auth/prisma-adapter": "^2.7.2",

@@ -23,6 +23,7 @@ export const env = createEnv({
     EXA_API_KEY: z.string().min(1),
     KV_REST_API_URL: z.string().url(),
     KV_REST_API_TOKEN: z.string().min(1),
+    ELEVENLABS_API_KEY: z.string().min(1),
   },
 
   /**
@@ -51,6 +52,7 @@ export const env = createEnv({
     EXA_API_KEY: process.env.EXA_API_KEY,
     KV_REST_API_URL: process.env.KV_REST_API_URL,
     KV_REST_API_TOKEN: process.env.KV_REST_API_TOKEN,
+    ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY,
     NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
   },
   /**

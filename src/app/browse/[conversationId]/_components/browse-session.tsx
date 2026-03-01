@@ -26,14 +26,12 @@ function PulsingDots() {
   );
 }
 
-// renders markdown-like text: **bold**, *italic*, `code`, and newlines
-function FormattedText({ text }: { text: string }) {
-  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`|\n)/g);
-
+// inline markdown: **bold**, *italic*, `code`
+function InlineFormatted({ text }: { text: string }) {
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g);
   return (
     <>
       {parts.map((part, i) => {
-        if (part === "\n") return <br key={i} />;
         if (part.startsWith("**") && part.endsWith("**"))
           return <strong key={i}>{part.slice(2, -2)}</strong>;
         if (part.startsWith("*") && part.endsWith("*"))
@@ -51,6 +49,94 @@ function FormattedText({ text }: { text: string }) {
       })}
     </>
   );
+}
+
+// block-level markdown: headings, lists, paragraphs
+function FormattedText({ text }: { text: string }) {
+  const lines = text.split("\n");
+  const blocks: React.ReactNode[] = [];
+  let currentList: { type: "ul" | "ol"; items: string[] } | null = null;
+
+  const flushList = () => {
+    if (!currentList) return;
+    const Tag = currentList.type;
+    blocks.push(
+      <Tag
+        key={`list-${blocks.length}`}
+        className={`my-1 space-y-0.5 ${Tag === "ol" ? "list-decimal" : "list-disc"} pl-5`}
+      >
+        {currentList.items.map((item, j) => (
+          <li key={j}>
+            <InlineFormatted text={item} />
+          </li>
+        ))}
+      </Tag>,
+    );
+    currentList = null;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+
+    // headings
+    const headingMatch = /^(#{1,3})\s+(.+)$/.exec(line);
+    if (headingMatch) {
+      flushList();
+      const level = headingMatch[1]!.length;
+      const content = headingMatch[2]!;
+      const sizeClass =
+        level === 1 ? "text-lg font-bold" : level === 2 ? "text-base font-bold" : "text-[15px] font-semibold";
+      blocks.push(
+        <p key={`h-${i}`} className={`${sizeClass} mt-2 first:mt-0`}>
+          <InlineFormatted text={content} />
+        </p>,
+      );
+      continue;
+    }
+
+    // unordered list
+    if (/^[-*]\s+/.test(line)) {
+      const item = line.replace(/^[-*]\s+/, "");
+      if (currentList?.type === "ul") {
+        currentList.items.push(item);
+      } else {
+        flushList();
+        currentList = { type: "ul", items: [item] };
+      }
+      continue;
+    }
+
+    // ordered list
+    const olMatch = /^\d+\.\s+(.+)$/.exec(line);
+    if (olMatch) {
+      const item = olMatch[1]!;
+      if (currentList?.type === "ol") {
+        currentList.items.push(item);
+      } else {
+        flushList();
+        currentList = { type: "ol", items: [item] };
+      }
+      continue;
+    }
+
+    // blank line = paragraph break
+    if (line.trim() === "") {
+      flushList();
+      blocks.push(<div key={`br-${i}`} className="h-2" />);
+      continue;
+    }
+
+    // regular text
+    flushList();
+    blocks.push(
+      <span key={`p-${i}`} className="block">
+        <InlineFormatted text={line} />
+      </span>,
+    );
+  }
+
+  flushList();
+  return <div className="space-y-0.5">{blocks}</div>;
 }
 
 export function BrowseSession({
@@ -164,7 +250,7 @@ export function BrowseSession({
             title="Chat history"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </a>
         </div>

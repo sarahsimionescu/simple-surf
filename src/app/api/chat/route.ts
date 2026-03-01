@@ -169,7 +169,7 @@ export async function POST(req: Request) {
   const gatewayProvider = createGateway({
     apiKey: env.AI_GATEWAY_API_KEY,
   });
-  const baseModel = gatewayProvider("anthropic/claude-sonnet-4");
+  const baseModel = gatewayProvider("anthropic/claude-opus-4.6");
   const modelWithMemory = withSupermemory(baseModel, session.user.id, {
     apiKey: env.SUPERMEMORY_API_KEY,
     addMemory: "always",

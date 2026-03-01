@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
 import {
   DefaultChatTransport,
@@ -174,14 +174,27 @@ export function BrowseSession({
     );
   }, []);
 
+  const locationBody = useMemo(
+    () =>
+      location
+        ? { lat: location.lat, lng: location.lng, name: locationName }
+        : locationName
+          ? { name: locationName }
+          : undefined,
+    [location, locationName],
+  );
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        body: { conversationId, location: locationBody },
+      }),
+    [conversationId, locationBody],
+  );
+
   const { messages, sendMessage, addToolOutput, status } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-      body: {
-        conversationId,
-        location: location ? { ...location, name: locationName } : locationName ? { name: locationName } : undefined,
-      },
-    }),
+    transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });
 

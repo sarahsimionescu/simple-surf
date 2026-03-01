@@ -21,12 +21,12 @@ export function LandingHero() {
         </h1>
         <p className="landing-reveal landing-reveal-delay-1 mx-auto mt-8 max-w-lg text-xl leading-relaxed text-[#4A4A48] md:text-2xl">
           SimpleSurf browses the web for you. Just describe what
-          you&apos;re looking for — no computer skills needed.
+          you&apos;re looking for. No computer skills needed.
         </p>
         <div className="landing-reveal landing-reveal-delay-2 mt-12 flex flex-col items-center gap-3">
           <SignInButton className="group relative cursor-pointer rounded-full bg-[#141414] px-12 py-5 text-lg font-semibold text-[#F7F7F5] transition-all duration-500 hover:bg-[#0077B6] hover:shadow-[0_0_40px_rgba(0,119,182,0.3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]">
             <span className="flex items-center gap-3">
-              Get started — it&apos;s free
+              Get started, it&apos;s free
               <ArrowIcon />
             </span>
           </SignInButton>

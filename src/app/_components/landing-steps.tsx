@@ -2,7 +2,7 @@ const steps = [
   {
     title: "Describe what you need",
     description:
-      'Type a simple request like "Find me a recipe for banana bread." No special words needed — just say it like you would to a friend.',
+      'Type a simple request like "Find me a recipe for banana bread." No special words needed, just say it like you would to a friend.',
   },
   {
     title: "We browse for you",

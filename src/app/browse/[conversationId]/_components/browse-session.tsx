@@ -607,8 +607,8 @@ export function BrowseSession({
               </div>
             )}
 
-            {messages.map((message) => (
-              <div key={message.id} className="flex flex-col gap-1">
+            {messages.map((message, msgIdx) => (
+              <div key={`${message.id}-${msgIdx}`} className="flex flex-col gap-1">
                 {message.parts.map((part, i) => {
                   if (part.type === "text") {
                     const isUser = message.role === "user";

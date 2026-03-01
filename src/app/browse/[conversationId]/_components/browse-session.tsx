@@ -153,10 +153,20 @@ export function BrowseSession({
       {/* chat panel */}
       <div className="flex h-full w-[400px] shrink-0 flex-col border-l border-[#141414]/[0.06] bg-[#F7F7F5]">
         {/* header */}
-        <div className="flex items-center border-b border-[#141414]/[0.06] px-5 py-4">
+        <div className="flex items-center justify-between border-b border-[#141414]/[0.06] px-5 py-4">
           <span className="font-[family-name:var(--font-syne)] text-sm font-bold lowercase tracking-tight text-[#141414]">
-            simplesurf
+            simplesurf 🌊
           </span>
+          <a
+            href="/browse"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4A4A48] transition-colors hover:bg-[#141414]/[0.06] hover:text-[#141414] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
+            aria-label="Chat history"
+            title="Chat history"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </a>
         </div>
 
         {/* messages */}

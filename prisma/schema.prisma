@@ -83,6 +83,7 @@ model Conversation {
   browserLiveUrl   String?
   lastVisitedUrl     String?
   lastScreenshotUrl  String?
+  sessionMemory      Json?
   messages           Message[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

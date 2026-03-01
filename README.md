@@ -39,17 +39,20 @@ This project is built with the [T3 Stack](https://create.t3.gg/):
 ### Installation
 
 1. Clone the repository
+
 ```bash
 git clone https://github.com/yourusername/simple-surf.git
 cd simple-surf
 ```
 
 2. Install dependencies
+
 ```bash
 npm install
 ```
 
 3. Set up environment variables
+
 ```bash
 cp .env.example .env
 ```
@@ -57,24 +60,15 @@ cp .env.example .env
 4. Update the `.env` file with your database credentials and other required values
 
 5. Run database migrations
+
 ```bash
 npx prisma migrate dev
 ```
 
 6. Start the development server
+
 ```bash
 npm run dev
 ```
 
 7. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-## Deployment
-
-Follow the T3 Stack deployment guides for:
-- [Vercel](https://create.t3.gg/en/deployment/vercel)
-- [Netlify](https://create.t3.gg/en/deployment/netlify)
-- [Docker](https://create.t3.gg/en/deployment/docker)
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.

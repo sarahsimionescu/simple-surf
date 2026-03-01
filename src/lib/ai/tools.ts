@@ -1,9 +1,14 @@
 import { tool } from "ai";
 import { z } from "zod";
-import Exa from "exa-js";
-import { runBrowserTask } from "~/server/services/browser-use";
+import { executeWebSearch, executeBrowseTask } from "./tool-logic";
 import { db } from "~/server/db";
 import { env } from "~/env";
+import type { SessionMemory } from "./orchestration";
+
+function log(tag: string, ...args: unknown[]) {
+  const ts = new Date().toISOString().slice(11, 23);
+  console.log(`[${ts}][TOOL:${tag}]`, ...args);
+}
 
 // extract the first url from a string
 function extractUrl(text: string): string | null {
@@ -11,9 +16,14 @@ function extractUrl(text: string): string | null {
   return match?.[0] ?? null;
 }
 
+// Track the active browse task ID per conversation so we can cancel on new browse
+const activeBrowseTasks = new Map<string, string>();
+
 export function createBrowseTool(
   browserSessionId: string,
   conversationId: string,
+  _sessionMemory: SessionMemory,
+  _saveSessionMemory: (memory: SessionMemory) => Promise<void>,
 ) {
   return tool({
     description:
@@ -26,21 +36,43 @@ export function createBrowseTool(
         ),
     }),
     execute: async ({ instruction }) => {
-      const result = await runBrowserTask(browserSessionId, instruction);
-
-      // update lastVisitedUrl and screenshot from output or instruction
-      const url = extractUrl(result.output) ?? extractUrl(instruction);
-      if (url || result.screenshotUrl) {
-        await db.conversation.update({
-          where: { id: conversationId },
-          data: {
-            ...(url && { lastVisitedUrl: url }),
-            ...(result.screenshotUrl && { lastScreenshotUrl: result.screenshotUrl }),
-          },
-        });
+      const t0 = Date.now();
+      log("browse", "▶ Called:", instruction);
+      const previousTaskId = activeBrowseTasks.get(conversationId) ?? null;
+      if (previousTaskId) {
+        log("browse", "Cancelling previous task:", previousTaskId);
       }
 
-      return result.output;
+      try {
+        const result = await executeBrowseTask(
+          browserSessionId,
+          instruction,
+          previousTaskId,
+        );
+        log("browse", "✓ Done:", result.output.slice(0, 200), `(${Date.now() - t0}ms)`);
+
+        activeBrowseTasks.set(conversationId, result.taskId);
+
+        // update lastVisitedUrl and screenshot from output or instruction
+        const url = extractUrl(result.output) ?? extractUrl(instruction);
+        if (url || result.screenshotUrl) {
+          log("browse", "Updating DB — url:", url, "screenshot:", !!result.screenshotUrl);
+          await db.conversation.update({
+            where: { id: conversationId },
+            data: {
+              ...(url && { lastVisitedUrl: url }),
+              ...(result.screenshotUrl && {
+                lastScreenshotUrl: result.screenshotUrl,
+              }),
+            },
+          });
+        }
+
+        return result.output;
+      } catch (err) {
+        log("browse", "✗ ERROR:", err);
+        return "Sorry, I ran into a problem trying to do that in the browser. Could you try again?";
+      }
     },
   });
 }
@@ -52,24 +84,16 @@ export const webSearchTool = tool({
     query: z.string().describe("The search query"),
   }),
   execute: async ({ query }) => {
-    const exa = new Exa(env.EXA_API_KEY);
-    const results = await exa.search(query, {
-      type: "auto",
-      numResults: 5,
-      contents: {
-        highlights: {
-          maxCharacters: 300,
-        },
-      },
-    });
-
-    const searchResults = results.results.map((r) => ({
-      title: r.title ?? "",
-      url: r.url,
-      highlights: (r as { highlights?: string[] }).highlights ?? [],
-    }));
-
-    return JSON.stringify(searchResults);
+    const t0 = Date.now();
+    log("webSearch", "▶ Called:", query);
+    try {
+      const results = await executeWebSearch(query, env.EXA_API_KEY);
+      log("webSearch", "✓ Done:", results.length, "results", `(${Date.now() - t0}ms)`);
+      return JSON.stringify(results);
+    } catch (err) {
+      log("webSearch", "✗ ERROR:", err);
+      return "Search failed.";
+    }
   },
 });
 
@@ -88,3 +112,31 @@ export const renderScreenTool = tool({
   }),
   // No execute — handled on the client via addToolOutput
 });
+
+export function createRecordTaskTool(
+  sessionMemory: SessionMemory,
+  saveSessionMemory: (memory: SessionMemory) => Promise<void>,
+) {
+  return tool({
+    description:
+      "Record a task you completed, so you remember your progress. Use this after completing a significant action like navigating to a page, filling a form, or finding information.",
+    inputSchema: z.object({
+      instruction: z
+        .string()
+        .describe("What you were asked to do or decided to do"),
+      outcome: z
+        .string()
+        .describe("What happened — the result of the action"),
+    }),
+    execute: async ({ instruction, outcome }) => {
+      log("recordTask", "▶ Called:", instruction, "→", outcome);
+      sessionMemory.completedTasks.push({
+        instruction,
+        outcome: outcome.slice(0, 150),
+      });
+      await saveSessionMemory(sessionMemory);
+      log("recordTask", "✓ Saved to session memory");
+      return `Recorded: ${instruction} → ${outcome}`;
+    },
+  });
+}

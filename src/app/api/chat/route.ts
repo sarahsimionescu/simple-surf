@@ -8,19 +8,41 @@ import {
 import { createGateway } from "@ai-sdk/gateway";
 import { withSupermemory } from "@supermemory/tools/ai-sdk";
 import { cacheMiddleware } from "~/lib/ai/cache-middleware";
-import { createBrowseTool, renderScreenTool, webSearchTool } from "~/lib/ai/tools";
+import {
+  createBrowseTool,
+  renderScreenTool,
+  webSearchTool,
+  createRecordTaskTool,
+} from "~/lib/ai/tools";
+import {
+  buildSystemPrompt,
+  emptySessionMemory,
+  type SessionMemory,
+} from "~/lib/ai/orchestration";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { auth } from "~/server/better-auth";
 import { headers } from "next/headers";
-import { isBrowserSessionAlive, createBrowserSession } from "~/server/services/browser-use";
+import {
+  isBrowserSessionAlive,
+  createBrowserSession,
+} from "~/server/services/browser-use";
+
+function log(tag: string, ...args: unknown[]) {
+  const ts = new Date().toISOString().slice(11, 23);
+  console.log(`[${ts}][CHAT:${tag}]`, ...args);
+}
 
 export async function POST(req: Request) {
+  log("REQUEST", "POST /api/chat received");
+
   // Authenticate
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
+    log("AUTH", "Unauthorized — no session");
     return new Response("Unauthorized", { status: 401 });
   }
+  log("AUTH", "User:", session.user.id);
 
   const body = (await req.json()) as {
     messages: UIMessage[];
@@ -28,11 +50,26 @@ export async function POST(req: Request) {
   };
   const { messages, conversationId } = body;
 
+  log("INPUT", "conversationId:", conversationId, "messages:", messages.length);
+  // Log each message summary
+  for (const msg of messages) {
+    const parts = msg.parts.map((p) => {
+      if (p.type === "text")
+        return `text:"${(p as { text: string }).text.slice(0, 80)}"`;
+      if (p.type.startsWith("tool-")) {
+        const state = "state" in p ? (p as { state: string }).state : "?";
+        return `${p.type}(${state})`;
+      }
+      return p.type;
+    });
+    log("INPUT:msg", `[${msg.role}] id=${msg.id} parts=[${parts.join(", ")}]`);
+  }
+
   // read location from cookie
   const cookieHeader = (await headers()).get("cookie") ?? "";
-  const locationCookie = cookieHeader.match(/user_location=([^;]+)/)?.[1];
+  const locationCookie = /user_location=([^;]+)/.exec(cookieHeader)?.[1];
   const location = (() => {
-    if (!locationCookie) return null;
+    if (!locationCookie) return undefined;
     const [latStr, lngStr, ...nameParts] = locationCookie.split(",");
     const lat = latStr ? parseFloat(latStr) : NaN;
     const lng = lngStr ? parseFloat(lngStr) : NaN;
@@ -43,24 +80,40 @@ export async function POST(req: Request) {
       name,
     };
   })();
+  log(
+    "LOCATION",
+    location ? `${location.lat},${location.lng} (${location.name})` : "none",
+  );
 
   // Get conversation and verify ownership
   const conversation = await db.conversation.findFirst({
     where: { id: conversationId, userId: session.user.id },
   });
   if (!conversation) {
+    log("DB", "Conversation not found:", conversationId);
     return new Response("Conversation not found", { status: 404 });
   }
   if (!conversation.browserSessionId) {
+    log("DB", "No browser session for conversation:", conversationId);
     return new Response("No browser session", { status: 400 });
   }
+  log(
+    "DB",
+    "Conversation found, browserSessionId:",
+    conversation.browserSessionId,
+  );
 
   // re-create browser session if it expired
   let browserSessionId = conversation.browserSessionId;
   const alive = await isBrowserSessionAlive(browserSessionId);
+  log("BROWSER", "Session alive:", alive);
   if (!alive) {
-    const newSession = await createBrowserSession(conversation.lastVisitedUrl ?? undefined);
+    log("BROWSER", "Recreating session, lastUrl:", conversation.lastVisitedUrl);
+    const newSession = await createBrowserSession(
+      conversation.lastVisitedUrl ?? undefined,
+    );
     browserSessionId = newSession.id;
+    log("BROWSER", "New session:", browserSessionId);
     await db.conversation.update({
       where: { id: conversationId },
       data: {
@@ -80,6 +133,7 @@ export async function POST(req: Request) {
         .join(" ")
         .slice(0, 100);
       if (text) {
+        log("TITLE", "Auto-titling:", text);
         await db.conversation.update({
           where: { id: conversationId },
           data: { title: text },
@@ -88,7 +142,30 @@ export async function POST(req: Request) {
     }
   }
 
-  // Model stack: gateway → supermemory → cache middleware
+  // Load session memory from DB
+  const sessionMemory: SessionMemory = conversation.sessionMemory
+    ? (conversation.sessionMemory as unknown as SessionMemory)
+    : emptySessionMemory();
+  log("MEMORY", "Loaded session memory:", JSON.stringify(sessionMemory));
+
+  const saveSessionMemory = async (memory: SessionMemory) => {
+    log("MEMORY", "Saving session memory:", JSON.stringify(memory));
+    await db.conversation.update({
+      where: { id: conversationId },
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      data: { sessionMemory: JSON.parse(JSON.stringify(memory)) },
+    });
+  };
+
+  // Build system prompt using shared orchestration
+  const systemPrompt = buildSystemPrompt({
+    mode: "text",
+    location,
+    memory: sessionMemory,
+  });
+  log("PROMPT", "System prompt length:", systemPrompt.length);
+
+  // Model stack: gateway -> supermemory -> cache middleware
   const gatewayProvider = createGateway({
     apiKey: env.AI_GATEWAY_API_KEY,
   });
@@ -102,46 +179,112 @@ export async function POST(req: Request) {
     middleware: cacheMiddleware,
   });
 
+  log(
+    "STREAM",
+    "Starting streamText with tools: browse, webSearch, renderScreen, recordTask",
+  );
+  const modelMessages = await convertToModelMessages(messages);
+  log("STREAM", "Converted to", modelMessages.length, "model messages");
+
   const result = streamText({
     model,
-    system: `You are SimpleSurf, a friendly and patient browsing assistant designed for elderly users.
-
-Your job is to help users browse the web. You have three tools:
-- "webSearch": Use this first for quick factual lookups or finding the right page to visit. After getting results, use "browse" to navigate to the most relevant URL so the user can see it.
-- "browse": Use this to perform actions in the browser (navigate, click, search, fill forms, etc.)
-- "renderScreen": Use this to ask the user for input when you need choices or information from them.
-${location ? `\nLOCATION: ${location.lat && location.lng ? `${location.lat}, ${location.lng}` : ""}${location.name ? ` (${location.name})` : ""}. Use these coordinates for all location queries. Never search "near me" - the browser has no location access. Instead search near these coordinates or city name.\n` : ""}
-Guidelines:
-- Use simple, clear language. Avoid jargon.
-- Be patient and reassuring.
-- When you find information, summarize it clearly.
-- When presenting choices, use renderScreen with clear, simple options.
-- For authentication (logging into websites), use renderScreen with type "auth" to prompt the user to log in directly in the browser iframe.
-- Always confirm important actions before executing them.`,
-    messages: await convertToModelMessages(messages),
-    stopWhen: stepCountIs(10),
+    system: systemPrompt,
+    messages: modelMessages,
+    stopWhen: stepCountIs(100),
     tools: {
-      browse: createBrowseTool(browserSessionId, conversationId),
+      browse: createBrowseTool(
+        browserSessionId,
+        conversationId,
+        sessionMemory,
+        saveSessionMemory,
+      ),
       webSearch: webSearchTool,
       renderScreen: renderScreenTool,
+      recordTask: createRecordTaskTool(sessionMemory, saveSessionMemory),
     },
   });
 
+  log("STREAM", "Returning stream response");
   return result.toUIMessageStreamResponse({
     originalMessages: messages,
     onFinish: async ({ messages: updatedMessages }) => {
-      // persist all messages to db
-      await db.message.deleteMany({ where: { conversationId } });
-      if (updatedMessages.length > 0) {
-        await db.message.createMany({
-          data: updatedMessages.map((m) => ({
-            id: m.id,
-            conversationId,
-            role: m.role,
-            content: JSON.stringify(m),
-          })),
+      log("FINISH", "Stream finished, total messages:", updatedMessages.length);
+      // Log each output message
+      for (const msg of updatedMessages) {
+        const parts = msg.parts.map((p) => {
+          if (p.type === "text")
+            return `text:"${(p as { text: string }).text.slice(0, 80)}"`;
+          if (p.type.startsWith("tool-")) {
+            const state = "state" in p ? (p as { state: string }).state : "?";
+            return `${p.type}(${state})`;
+          }
+          return p.type;
         });
+        log(
+          "FINISH:msg",
+          `[${msg.role}] id=${msg.id} parts=[${parts.join(", ")}]`,
+        );
       }
+
+      // persist all messages to db — filter out empty/broken messages
+      const validMessages = updatedMessages.filter(
+        (m) => m.id && m.parts.length > 0,
+      );
+      log("DB", "Deleting old messages for conversation:", conversationId);
+      log(
+        "DB",
+        `Filtered: ${updatedMessages.length} total → ${validMessages.length} valid`,
+      );
+
+      // Use a transaction so delete + create are atomic
+      if (validMessages.length > 0) {
+        await db.$transaction([
+          db.message.deleteMany({ where: { conversationId } }),
+          db.message.createMany({
+            data: validMessages.map((m) => ({
+              id: m.id,
+              conversationId,
+              role: m.role,
+              content: JSON.stringify(m),
+            })),
+          }),
+        ]);
+        log("DB", "Saved", validMessages.length, "messages in transaction");
+      } else {
+        log("DB", "No valid messages to save, skipping");
+      }
+
+      // Auto-record renderScreen QA into session memory
+      let qaRecorded = 0;
+      for (const msg of updatedMessages) {
+        for (const part of msg.parts) {
+          if (
+            part.type === "tool-renderScreen" &&
+            "state" in part &&
+            part.state === "output-available" &&
+            "input" in part &&
+            "output" in part
+          ) {
+            const input = part.input as { prompt: string };
+            const output = part.output as string;
+            const alreadyRecorded = sessionMemory.screenQA.some(
+              (qa) => qa.question === input.prompt && qa.answer === output,
+            );
+            if (!alreadyRecorded) {
+              sessionMemory.screenQA.push({
+                question: input.prompt,
+                answer: output,
+              });
+              qaRecorded++;
+            }
+          }
+        }
+      }
+      if (qaRecorded > 0) {
+        log("MEMORY", "Auto-recorded", qaRecorded, "renderScreen QA pairs");
+      }
+      await saveSessionMemory(sessionMemory);
+      log("FINISH", "All done");
     },
   });
 }

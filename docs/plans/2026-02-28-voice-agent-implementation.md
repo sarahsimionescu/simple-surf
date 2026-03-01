@@ -13,11 +13,13 @@
 ## Task 1: Install LiveKit dependencies
 
 **Files:**
+
 - Modify: `package.json`
 
 **Step 1: Install server-side LiveKit packages**
 
 Run:
+
 ```bash
 pnpm add @livekit/agents @livekit/agents-plugin-silero @livekit/agents-plugin-livekit @livekit/noise-cancellation-node livekit-server-sdk @livekit/protocol
 ```
@@ -25,6 +27,7 @@ pnpm add @livekit/agents @livekit/agents-plugin-silero @livekit/agents-plugin-li
 **Step 2: Install client-side LiveKit packages**
 
 Run:
+
 ```bash
 pnpm add @livekit/components-react @livekit/components-styles livekit-client
 ```
@@ -46,6 +49,7 @@ git commit -m "feat(voice): install LiveKit agent and client dependencies"
 ## Task 2: Add LiveKit environment variables
 
 **Files:**
+
 - Modify: `src/env.js`
 - Modify: `.env.example`
 
@@ -101,6 +105,7 @@ git commit -m "feat(voice): add LiveKit environment variables"
 This is the critical refactor — extracting the system prompt, model stack factory, and tool creators so both the text chat route and the voice agent can import them.
 
 **Files:**
+
 - Create: `src/lib/ai/shared.ts`
 - Modify: `src/app/api/chat/route.ts`
 
@@ -222,6 +227,7 @@ git commit -m "refactor: extract shared AI config for text and voice agents"
 ## Task 4: Create LiveKit token generation API route
 
 **Files:**
+
 - Create: `src/app/api/livekit/token/route.ts`
 
 **Step 1: Create the token endpoint**
@@ -314,6 +320,7 @@ git commit -m "feat(voice): add LiveKit token generation API route"
 ## Task 5: Create the LiveKit voice agent worker
 
 **Files:**
+
 - Create: `src/agent/agent.ts`
 - Create: `src/agent/index.ts`
 
@@ -335,7 +342,9 @@ export class SimpleSurfAgent extends voice.Agent {
 
   constructor(browserSessionId: string) {
     super({
-      instructions: SYSTEM_PROMPT + `\n\nYou are currently in VOICE mode. The user is speaking to you.
+      instructions:
+        SYSTEM_PROMPT +
+        `\n\nYou are currently in VOICE mode. The user is speaking to you.
 Additional voice-mode guidelines:
 - Keep responses concise and conversational — the user is listening, not reading.
 - When using renderScreen, speak the options clearly (e.g. "Would you like option one, two, or three?") and listen for their verbal choice.
@@ -478,7 +487,10 @@ Note: This may require adjusting tsconfig or creating a separate `tsconfig.agent
 ```typescript
 // In agent files, use relative imports instead of ~/
 import { SYSTEM_PROMPT } from "../lib/ai/shared";
-import { createBrowserTask, pollTaskUntilDone } from "../server/services/browser-use";
+import {
+  createBrowserTask,
+  pollTaskUntilDone,
+} from "../server/services/browser-use";
 ```
 
 **Step 4: Commit**
@@ -493,6 +505,7 @@ git commit -m "feat(voice): create LiveKit voice agent with browse and renderScr
 ## Task 6: Add mic toggle and LiveKit room to BrowseSession
 
 **Files:**
+
 - Modify: `src/app/browse/[conversationId]/_components/browse-session.tsx`
 
 **Step 1: Add voice mode state and LiveKit connection logic**
@@ -825,6 +838,7 @@ git commit -m "feat(voice): add mic toggle and LiveKit room to BrowseSession"
 ## Task 7: Configure agent for LiveKit Cloud deployment
 
 **Files:**
+
 - Create: `livekit-agent.json` (or `lk` CLI config)
 
 **Step 1: Create a package.json script for running the agent locally**
@@ -851,6 +865,7 @@ Then update the script:
 
 Run: `pnpm agent:dev`
 Expected: Agent registers with LiveKit Cloud and waits for dispatch. You should see output like:
+
 ```
 [info] registered agent: simplesurf-voice
 [info] waiting for dispatch...
@@ -878,11 +893,13 @@ git commit -m "feat(voice): add agent dev script for local testing"
 **Step 1: Install LiveKit CLI**
 
 Run:
+
 ```bash
 brew install livekit-cli
 ```
 
 Or via npm:
+
 ```bash
 npm install -g @livekit/cli
 ```
@@ -890,6 +907,7 @@ npm install -g @livekit/cli
 **Step 2: Authenticate with LiveKit Cloud**
 
 Run:
+
 ```bash
 lk cloud auth
 ```
@@ -897,17 +915,20 @@ lk cloud auth
 **Step 3: Deploy the agent**
 
 Run:
+
 ```bash
 lk cloud deploy --agent-name simplesurf-voice
 ```
 
 Follow the CLI prompts to configure the deployment. You'll need to provide:
+
 - The entry point: `src/agent/index.ts`
 - Environment variables: `BROWSER_USE_API_KEY`, `AI_GATEWAY_API_KEY`, `SUPERMEMORY_API_KEY`
 
 **Step 4: Verify deployment**
 
 Run:
+
 ```bash
 lk cloud agent list
 ```
@@ -927,6 +948,7 @@ Expected: `simplesurf-voice` appears as a registered agent.
 ### Anthropic Claude on LiveKit Node.js
 
 The string format `"anthropic/claude-sonnet-4"` is used for LiveKit Cloud's hosted inference. If this doesn't work in the Node.js agent (Anthropic plugin is primarily Python), fall back to:
+
 - `"openai/gpt-4.1"` as the LLM string, or
 - Use the OpenAI plugin with Anthropic's OpenAI-compatible API endpoint
 
@@ -937,6 +959,7 @@ The agent worker runs on LiveKit Cloud infrastructure. It needs access to the Br
 ### Shared imports between Next.js and Agent
 
 The agent uses relative imports from `src/lib/ai/shared.ts` and `src/server/services/browser-use.ts`. These modules must work outside the Next.js runtime:
+
 - `shared.ts` imports `~/env` which uses `@t3-oss/env-nextjs` — this won't work in the agent process. The agent should use `process.env` directly via `dotenv` instead.
 - Consider creating a thin `src/lib/ai/shared-core.ts` that exports just `SYSTEM_PROMPT` (no env dependencies) for the agent to import, or have the agent define its env access separately.
 

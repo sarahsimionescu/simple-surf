@@ -20,6 +20,7 @@ export default async function ConversationPage({
   return (
     <BrowseSession
       conversationId={conversation.id}
+      browserSessionId={conversation.browserSessionId ?? ""}
       browserLiveUrl={conversation.browserLiveUrl}
       initialMessages={conversation.uiMessages}
       isNew={query.new === "1"}

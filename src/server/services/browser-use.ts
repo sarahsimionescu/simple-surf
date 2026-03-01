@@ -7,6 +7,8 @@ export async function createBrowserSession() {
     startUrl: "https://www.google.com",
     keepAlive: true,
     persistMemory: true,
+    browserScreenWidth: 1280,
+    browserScreenHeight: 1024,
   });
   return { id: session.id, liveUrl: session.liveUrl, status: session.status };
 }

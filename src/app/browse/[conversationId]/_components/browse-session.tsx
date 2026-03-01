@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import {
   DefaultChatTransport,
@@ -150,51 +150,27 @@ export function BrowseSession({
   const [input, setInput] = useState("");
   const [activeScreen, setActiveScreen] = useState<ActiveScreen | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationName, setLocationName] = useState<string | null>(null);
 
-  // request geolocation on mount
+  // request geolocation on mount, store in cookie for server access
   useEffect(() => {
     if (!navigator.geolocation) return;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const city = tz.split("/").pop()?.replace(/_/g, " ") ?? "";
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setLocation(coords);
-        // derive city from timezone as a fallback display name
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const city = tz.split("/").pop()?.replace(/_/g, " ") ?? "";
-        setLocationName(city);
+        document.cookie = `user_location=${pos.coords.latitude},${pos.coords.longitude},${city};path=/;max-age=86400;SameSite=Lax`;
       },
       () => {
-        // denied or unavailable, use timezone only
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const city = tz.split("/").pop()?.replace(/_/g, " ") ?? "";
-        setLocationName(city);
+        document.cookie = `user_location=,,${city};path=/;max-age=86400;SameSite=Lax`;
       },
     );
   }, []);
 
-  const locationBody = useMemo(
-    () =>
-      location
-        ? { lat: location.lat, lng: location.lng, name: locationName }
-        : locationName
-          ? { name: locationName }
-          : undefined,
-    [location, locationName],
-  );
-
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/chat",
-        body: { conversationId, location: locationBody },
-      }),
-    [conversationId, locationBody],
-  );
-
   const { messages, sendMessage, addToolOutput, status } = useChat({
-    transport,
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      body: { conversationId },
+    }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });
 
@@ -252,13 +228,13 @@ export function BrowseSession({
       style={{ colorScheme: "light" }}
     >
       {/* browser iframe + render screen overlay */}
-      <div className="relative min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1 overflow-hidden bg-[#F7F7F5]">
         {browserLiveUrl && (
           <iframe
             src={browserLiveUrl}
-            className="absolute inset-0 h-full w-full border-0"
+            className="h-full w-full border-0"
             title="Browser View"
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            allow="clipboard-read; clipboard-write"
           />
         )}
 

@@ -75,16 +75,17 @@ model Account {
 }
 
 model Conversation {
-  id               String    @id @default(cuid())
-  userId           String
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title            String?
-  browserSessionId String?
-  browserLiveUrl   String?
-  lastVisitedUrl   String?
-  messages         Message[]
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String?
+  browserSessionId  String?
+  browserLiveUrl    String?
+  lastVisitedUrl    String?
+  lastScreenshotUrl String?
+  messages          Message[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([userId])
   @@map("conversation")

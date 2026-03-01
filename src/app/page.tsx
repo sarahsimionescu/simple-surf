@@ -2,21 +2,21 @@ import { redirect } from "next/navigation";
 import { getSession } from "~/server/better-auth/server";
 import { SignInButton } from "~/app/_components/sign-in-button";
 
-const features = [
+const steps = [
   {
-    title: "just ask",
+    title: "Describe what you need",
     description:
-      "Type what you're looking for in everyday language. SimpleSurf does the browsing for you — clicking, scrolling, and filling out forms.",
+      'Type a simple request like "Find me a recipe for banana bread." No special words needed — just say it like you would to a friend.',
   },
   {
-    title: "we get you",
+    title: "We browse for you",
     description:
-      "No need to know the right website or the right words. SimpleSurf understands what you mean and finds what you need.",
+      "SimpleSurf opens a browser and does the searching, clicking, and typing. You can watch everything it does on your screen.",
   },
   {
-    title: "see it happen",
+    title: "You stay in control",
     description:
-      "Watch as SimpleSurf navigates the web for you in real time. You're always in control.",
+      "Nothing happens without you seeing it first. If we need a decision, we'll ask. You can stop at any time.",
   },
 ];
 
@@ -72,19 +72,19 @@ export default async function Home() {
               id="hero-heading"
               className="landing-reveal font-[family-name:var(--font-syne)] text-[clamp(3.5rem,12vw,11rem)] font-extrabold leading-[0.9] tracking-[-0.02em]"
             >
-              browse
+              the internet,
               <br />
-              <span className="text-[#0077B6]">smarter</span>
+              <span className="text-[#0077B6]">made easy</span>
               <span className="text-[#0077B6]/40">.</span>
             </h1>
             <p className="landing-reveal landing-reveal-delay-1 mx-auto mt-8 max-w-lg text-lg leading-relaxed text-[#4A4A48] md:text-xl">
-              Just tell us what you need. We&apos;ll browse the web and find it
-              for you — no tech skills required.
+              SimpleSurf browses the web for you. Just describe what
+              you&apos;re looking for — no computer skills needed.
             </p>
-            <div className="landing-reveal landing-reveal-delay-2 mt-12">
+            <div className="landing-reveal landing-reveal-delay-2 mt-12 flex flex-col items-center gap-3">
               <SignInButton className="group relative cursor-pointer rounded-full bg-[#141414] px-12 py-5 text-lg font-semibold text-[#F7F7F5] transition-all duration-500 hover:bg-[#0077B6] hover:shadow-[0_0_40px_rgba(0,119,182,0.3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]">
                 <span className="flex items-center gap-3">
-                  Get started
+                  Get started — it&apos;s free
                   <svg
                     width="18"
                     height="18"
@@ -103,6 +103,9 @@ export default async function Home() {
                   </svg>
                 </span>
               </SignInButton>
+              <span className="text-sm text-[#4A4A48]">
+                Uses your Google account — no new password needed.
+              </span>
             </div>
           </div>
 

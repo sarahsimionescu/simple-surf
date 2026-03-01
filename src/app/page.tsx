@@ -42,9 +42,9 @@ export default async function Home() {
           </div>
         </section>
 
-        <LandingMarquee />
-
         <LandingSteps />
+
+        <LandingMarquee />
 
         {/* divider */}
         <div aria-hidden="true" className="mx-auto max-w-5xl px-6">

@@ -183,24 +183,28 @@ export async function POST(req: Request) {
     "STREAM",
     "Starting streamText with tools: browse, webSearch, renderScreen, recordTask",
   );
-  // Strip errored tool-call parts with missing input — these cause
-  // "tool_use.input is invalid" API errors when conversations are reloaded.
-  const sanitizedMessages = messages.map((m) => ({
-    ...m,
-    parts: m.parts.filter((p) => {
-      if (
-        "state" in p &&
-        p.state === "output-error" &&
-        "toolCallId" in p &&
-        !("input" in p && p.input != null)
-      ) {
-        log("SANITIZE", `Stripped errored tool part: ${p.type}`);
-        return false;
+  // Fix up broken tool-call parts:
+  // - Errored parts with no input get stripped (would cause API errors)
+  // - Unanswered/errored parts with valid input get "No answer" as output
+  for (const m of messages) {
+    for (let i = 0; i < m.parts.length; i++) {
+      const p = m.parts[i]!;
+      if (!("state" in p && "toolCallId" in p)) continue;
+      // Strip errored parts with no input — can't send to API
+      if (p.state === "output-error" && !("input" in p && p.input != null)) {
+        log("SANITIZE", `Stripped errored tool part (no input): ${p.type}`);
+        m.parts.splice(i, 1);
+        i--;
+        continue;
       }
-      return true;
-    }),
-  }));
-  const modelMessages = await convertToModelMessages(sanitizedMessages);
+      // Auto-answer unanswered or errored tool calls with "No answer"
+      if (p.state === "output-error" || p.state === "input-available") {
+        log("SANITIZE", `Auto-answered abandoned tool part: ${p.type}`);
+        Object.assign(p, { state: "output-available", output: "No answer", errorText: undefined });
+      }
+    }
+  }
+  const modelMessages = await convertToModelMessages(messages);
   log("STREAM", "Converted to", modelMessages.length, "model messages");
 
   const result = streamText({

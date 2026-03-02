@@ -7,6 +7,12 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
+  // Credits exhausted
+  return Response.json(
+    { error: "Sorry, we ran out of credits. Please try again later." },
+    { status: 503 },
+  );
+
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return new Response("Unauthorized", { status: 401 });

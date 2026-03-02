@@ -3,6 +3,12 @@ import { getSession } from "~/server/better-auth/server";
 import { env } from "~/env";
 
 export async function GET() {
+  // Credits exhausted
+  return NextResponse.json(
+    { error: "Sorry, we ran out of credits. Please try again later." },
+    { status: 503 },
+  );
+
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

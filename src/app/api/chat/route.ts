@@ -36,6 +36,14 @@ function log(tag: string, ...args: unknown[]) {
 export async function POST(req: Request) {
   log("REQUEST", "POST /api/chat received");
 
+  // Credits exhausted — block all chat usage
+  return new Response(
+    JSON.stringify({
+      error: "Sorry, we ran out of credits. Please try again later.",
+    }),
+    { status: 503, headers: { "Content-Type": "application/json" } },
+  );
+
   // Authenticate
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {

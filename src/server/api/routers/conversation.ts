@@ -11,16 +11,13 @@ export const conversationRouter = createTRPCRouter({
   create: protectedProcedure
     .input(z.object({ title: z.string().optional() }).optional())
     .mutation(async ({ ctx, input }) => {
-      // Create Browser Use Cloud session
-      const browserSession = await createBrowserSession();
-
-      // Create conversation in DB
+      // Credits exhausted — create conversation record but skip browser session
       const conversation = await ctx.db.conversation.create({
         data: {
           userId: ctx.session.user.id,
           title: input?.title ?? null,
-          browserSessionId: browserSession.id,
-          browserLiveUrl: browserSession.liveUrl,
+          browserSessionId: "credits-exhausted",
+          browserLiveUrl: null,
         },
       });
 
@@ -36,20 +33,8 @@ export const conversationRouter = createTRPCRouter({
       });
       if (!conversation) throw new Error("Conversation not found");
 
-      // re-create browser session if expired
-      let { browserSessionId, browserLiveUrl } = conversation;
-      if (browserSessionId) {
-        const alive = await isBrowserSessionAlive(browserSessionId);
-        if (!alive) {
-          const newSession = await createBrowserSession(conversation.lastVisitedUrl ?? undefined);
-          browserSessionId = newSession.id;
-          browserLiveUrl = newSession.liveUrl ?? null;
-          await ctx.db.conversation.update({
-            where: { id: input.id },
-            data: { browserSessionId, browserLiveUrl },
-          });
-        }
-      }
+      // Credits exhausted — don't recreate browser sessions
+      const { browserSessionId, browserLiveUrl } = conversation;
 
       // parse stored messages back to UIMessage format
       const uiMessages = conversation.messages.map(

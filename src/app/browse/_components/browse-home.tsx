@@ -62,19 +62,17 @@ export function BrowseHome({
       {/* hero */}
       <div className="flex flex-col items-center px-6 pt-[18vh]">
         <h1 className="font-[family-name:var(--font-syne)] text-3xl font-bold lowercase tracking-tight md:text-4xl">
-          what can we help you with?
+          sorry, we ran out of credits
         </h1>
         <p className="mt-3 text-lg text-[#4A4A48]">
-          Start a new conversation and we&apos;ll browse the web for you.
+          SimpleSurf is currently unavailable. Please check back later.
         </p>
         <button
-          onClick={() => createConversation.mutate({})}
-          disabled={isStarting}
-          className="btn-shine group mt-8 cursor-pointer rounded-full bg-[#141414] px-10 py-5 text-lg font-semibold text-[#F7F7F5] transition-all duration-300 hover:bg-[#0077B6] hover:shadow-[0_0_40px_rgba(0,119,182,0.3)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B6]"
+          disabled
+          className="btn-shine group mt-8 cursor-not-allowed rounded-full bg-[#141414] px-10 py-5 text-lg font-semibold text-[#F7F7F5] opacity-50"
         >
           <span className="flex items-center gap-3">
-            {isStarting ? "Starting..." : "New conversation"}
-            {!isStarting && <ArrowIcon />}
+            New conversation
           </span>
         </button>
 

@@ -10,6 +10,12 @@ const MAX_AUDIO_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_TEXT_LENGTH = 5000; // characters
 
 export async function POST(req: Request) {
+  // Credits exhausted — block all speech usage
+  return Response.json(
+    { error: "Sorry, we ran out of credits. Please try again later." },
+    { status: 503 },
+  );
+
   // Authenticate
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {

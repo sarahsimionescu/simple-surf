@@ -3,10 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "~/server/better-auth/client";
-import { api } from "~/trpc/react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowIcon } from "~/app/_components/arrow-icon";
 
 interface Conversation {
   id: string;
@@ -22,16 +20,7 @@ export function BrowseHome({
   conversations: Conversation[];
 }) {
   const router = useRouter();
-  const [isNavigating, setIsNavigating] = useState(false);
   const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null);
-  const createConversation = api.conversation.create.useMutation({
-    onSuccess: (data) => {
-      setIsNavigating(true);
-      router.push(`/browse/${data.id}`);
-    },
-  });
-
-  const isStarting = createConversation.isPending || isNavigating;
 
   return (
     <main
